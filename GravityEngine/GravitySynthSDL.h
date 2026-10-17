@@ -35,17 +35,6 @@
 // TODO: Any effects related directly to instrument automation should be implemented directly into the synth (i.e. vibrato, pitchsweep, fadein, fadeout, etc.)
 // TODO: Acquire personal understanding of COPILOT marked code and rewrite it myself
 
-// Struct for submitting changes to the synth parameters from the main thread to the audio thread
-struct live_change_synth
-{
-    double freq = -9999.0;
-    double pan = -2.0;
-    double vol = -1.0;
-    double pw = -1.0;
-    double ctf = -1.0;
-    double res = -1.0;
-};
-
 // Chamerblain filter processing - COPILOT function implemented into a sequestored function
 // float sample : Current decimal audio position
 // float cutoff : 0 to 1 freq filter cutoff 
@@ -73,19 +62,6 @@ inline void ProcessChamberlainFilter(float sample, float cutoff, float resonance
     (*lp) *= 0.999f;
 }
 
-// Enum to define the wave forms on a synth
-enum class SynthWaveForm
-{
-    sine,
-    square,
-    pulse,
-    sawtooth,
-    triangle,
-    noise,
-    min = sine,
-    max = noise
-};
-
 // Conversion map for waveforms
 inline std::map<SynthWaveForm, std::string> waveform_to_string = {
     {SynthWaveForm::sine, "SINE"},
@@ -96,73 +72,6 @@ inline std::map<SynthWaveForm, std::string> waveform_to_string = {
     {SynthWaveForm::noise, "NOISE"}
 };
 
-// Voice structure
-class GravityEngine_SynthVoice
-{
-
-public:
-    SpscQueue<live_change_synth, 1024> live_changes;
-    std::atomic<int> frame_counter = 0;
-    std::atomic<float> frames_per_tick = 0;
-
-    // Actual audio values that are used in the audio thread
-    std::atomic<float> freq = 50.0;
-    std::atomic<float> volume = 1;
-    std::atomic<float> panning = 0.5;
-    std::atomic<float> pulse_width = 0.5;
-
-    // Staging values that are only used in tracking position in incremental changes to the synth parameters. 
-    // These are used to all movement to be smoother. So basically, the tracker thread will make a change to the
-    // audio values, then write the change to the queue and then write the change to these staging values so that
-    // it can continue from the last queue write value, even if the synth has not yet applied its changes.
-    std::atomic<float> stg_base_freq = 50.0;
-    std::atomic<float> stg_swpd_freq = 0.0;
-    std::atomic<float> stg_volume = 1;
-    std::atomic<float> stg_cutoff = 1;
-    std::atomic<float> stg_resonance = 1;
-    std::atomic<float> stg_panning = 0.5;
-    std::atomic<float> stg_pulse_width = 0.5;
-
-    std::atomic<float> pitch_freq = 0;
-    std::atomic<float> volume_freq = 0;
-    std::atomic<float> cutoff_freq = 0;
-    std::atomic<float> resonance_freq = 0;
-    std::atomic<float> pan_freq = 0.0;
-    std::atomic<float> pulse_width_freq = 0.0;
-
-    // float vibrato_freq = 0; -- Not yet implemented
-    // float vibrato_amp = 0; -- Not yet implemented
-
-    // Filter
-    float cutoff = 0.5f; // 0.0 - 1.0 -- TODO: Determine usable range
-    float resonance = 0.5f; // 0.0 - 1.0 -- TODO: Determine usable range
-
-    // Filter state
-    // (the filter now runs once per voice on the mono signal, so only the "_l" state is used.
-    //  The "_r" fields are kept so nothing else that references them breaks.)
-    float lp = 0.0f;
-    float bp = 0.0f;
-    float hp = 0.0f;
-
-    SynthWaveForm waveform = SynthWaveForm::sine;
-    FilterType filter = FilterType::none;
-    FilterAlgorithm algorithm = FilterAlgorithm::chamberlain;
-
-    // Other state variables
-    float pan_phase = 0.f;
-    float pw_phase = 0.f;
-
-    std::atomic<bool> will_start_playing = false;
-    std::atomic<bool> will_stop_playing = false;
-    std::atomic<bool> start_playing = false;
-
-    float phase = 0.;
-    float last_freq = 0;
-
-    // Audio-thread-only tick clock (fractional frames)
-    double tick_acc = 0.0;
-};
-
 // Template for synth objects
 class GravityEngine_Synth
 {
@@ -170,7 +79,7 @@ class GravityEngine_Synth
     // Synth parameters
 public:
 
-    std::vector<GravityEngine_SynthVoice*> voices;
+    std::vector<GravityEngine_Voice*> voices;
     int sample_frames;
 
     // How many device buffers to keep queued in the stream (1 = lowest latency, 2 = more slack)
@@ -309,7 +218,7 @@ public:
 
                             while (can_apply && v->tick_acc >= tick_len)
                             {
-                                live_change_synth change;
+                                live_change change;
                                 if (!v->live_changes.pop(change))
                                 {
                                     // The tracker hasn't delivered this tick's change yet. Keep the tick
@@ -327,6 +236,18 @@ public:
                                 if (change.vol != -1)     v->volume = change.vol;
                                 if (change.ctf != -1)     v->cutoff = change.ctf;
                                 if (change.res != -1)     v->resonance = change.res;
+
+                                // Dec will_stop_timer
+                                if (v->will_stop_timer == 0)
+                                {
+                                    v->will_stop_playing = true;
+                                    v->will_start_playing = false;
+                                    v->start_playing = false;
+                                }
+                                if (v->will_stop_timer > -1)
+                                {
+                                    v->will_stop_timer--;
+                                }
                             }
                         }
                     }
@@ -513,7 +434,6 @@ public:
     }
 
     // Automate the synth modulation variables (Effected by call rate)
-    // TODO: Implement filter automation
     void SynthAutomation(double* new_freq, double* new_pan, double* new_pw, double* new_vol, double* new_cutoff, double* new_resonance, int voice_index)
     {
         // Step panning

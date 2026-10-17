@@ -50,8 +50,8 @@ int playing_channel = -1;
 int open_instrument = -1;
 int open_sample = -1;
 int open_table = -1;
-int fx_length = 7;
-char fx[] = { 'A', 'B', 'C', 'D', 'E', 'F', 'G' };
+int fx_length = 4;
+char fx[] = { 'E', 'V', 'K', 'D' };
 int min_note = -12;
 int max_note = 107;
 bool pause_song = true;
@@ -110,8 +110,8 @@ void GameInit()
     for (int i = 0; i < channelcount; i++)
     {
         channellist[i].channelnumber = i;
-		audiosynth->voices.insert(audiosynth->voices.end(), new GravityEngine_SynthVoice());
-		audiosampler->voices.insert(audiosampler->voices.end(), new GravityEngine_SamplerVoice());
+		audiosynth->voices.insert(audiosynth->voices.end(), new GravityEngine_Voice());
+		audiosampler->voices.insert(audiosampler->voices.end(), new GravityEngine_Voice());
     }
 
 	// Bind the synth to channel 0

@@ -211,6 +211,80 @@ void PreviewSample(int channel_index, int sample_index)
     v->will_start_playing = true;
 }
 
+// DoEffect
+void DoFX(int channel_index, ChannelType inst_type, int f, int f_p)
+{
+    // Init voice
+    GravityEngine_Voice* v;
+    if (inst_type == ChannelType::synth)
+        v = audiosynth->voices[channel_index];
+    else // Implicitly ChannelType::file
+        v = audiosampler->voices[channel_index];
+
+    // Switch behavior on the fx
+    switch (fx[f])
+    {
+    case 'E': // E : Envelope
+        // TODO : Apply envelope logic
+        break;
+	case 'K': // K : Kill
+		// Kill the voice
+		v->will_stop_timer = f_p;
+		break;
+    case 'D': // D : Delay
+        // TODO : Apply delay logic
+        break;
+    }
+}
+
+// Get FX from Phrase and apply
+// channelnumber : The particular channel to play the step on
+// f : frequency to play
+// fx1 : FX1 to apply
+// fx1_p : FX1 parameter to apply
+// fx2 : FX2 to apply
+// fx2_p : FX2 parameter to apply
+// fx3 : FX3 to apply
+// fx3_p : FX3 parameter to apply
+void GetFX(int channel_index, ChannelType inst_type, int f, int fx1, int fx1_p, int fx2, int fx2_p, int fx3, int fx3_p)
+{
+    // Init voice
+    GravityEngine_Voice* v;
+    if (inst_type == ChannelType::synth)
+        v = audiosynth->voices[channel_index];
+	else // Implicitly ChannelType::file
+        v = audiosampler->voices[channel_index];
+
+	// Override frequency if a new one is provided
+    if (f != -9999)
+    {
+        v->stg_base_freq = NoteFreq(f);
+        v->stg_swpd_freq = v->stg_base_freq.load();
+    }
+
+    // Apply effect 1
+    if (fx1 != -1 && fx1_p != -1)
+    {
+        // Apply FX1 logic
+		DoFX(channel_index, inst_type, fx1, fx1_p);
+    }
+
+    // Apply effect 2
+    if (fx2 != -1 && fx2_p != -1)
+    {
+        // Apply FX2 logic
+		DoFX(channel_index, inst_type, fx2, fx2_p);
+    }
+
+    // Apply effect 3
+    if (fx3 != -1 && fx3_p != -1)
+    {
+        // Apply FX3 logic
+		DoFX(channel_index, inst_type, fx3, fx3_p);
+    }
+
+}
+
 // Play step phrase
 // channelnumber : The particular channel to play the step on
 // playing_phrase : Phrase to play
@@ -225,6 +299,12 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
         return;
     auto f = cur_phrase->arr[step_ptr][0];
     auto i = cur_phrase->arr[step_ptr][1];
+	auto fx1 = cur_phrase->arr[step_ptr][2];
+    auto fx1_p = cur_phrase->arr[step_ptr][3];
+	auto fx2 = cur_phrase->arr[step_ptr][4];
+    auto fx2_p = cur_phrase->arr[step_ptr][5];
+    auto fx3 = cur_phrase->arr[step_ptr][6];
+    auto fx3_p = cur_phrase->arr[step_ptr][7];
     // If no note is present, no need to play
     if (f != -9999 && GetAt(&instrumentlist, i) != nullptr)
     {
@@ -283,6 +363,9 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->frame_counter = frames_per_tick;
             v->frames_per_tick = frames_per_tick;
 
+            // Read and apply instrument functions
+            GetFX(channel_index, channellist[channel_index].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p);
+
             v->will_start_playing = true;
         }
         else if (instrumentlist[i]->type == ChannelType::file && instrumentlist[i]->sample_index != -1)
@@ -328,8 +411,21 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->frame_counter = frames_per_tick;
             v->frames_per_tick = frames_per_tick;
 
+            // Read and apply instrument functions
+            GetFX(channel_index, channellist[channel_index].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p);
+
             v->will_start_playing = true;
         }
+    }
+	// Should we apply a fequency change to the channel or an effect? If yes, then apply it
+    else if (f != -9999 || (fx1 != -1 && fx1_p != -1) || (fx2 != -1 && fx2_p != -1) || (fx3 != -1 && fx3_p != -1))
+    {
+        // Get playing chain tranposition
+        if (f != -9999 && play_context != pt_phrase && play_context != pt_phrase_all && play_context != pt_preview && running && !pause_song)
+            ApplyChainTransposition(channel_index, &f);
+
+        // Read and apply instrument functions
+        GetFX(channel_index, channellist[channel_index].type, f, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p);
     }
 }
 
@@ -607,7 +703,7 @@ void DoTick()
         // Submit changes throughout the substep
         if (channellist[i].type == ChannelType::synth)
         {
-            live_change_synth s =
+            live_change s =
             {
                 new_freq // Frequency changes,
                 , new_pan // Panning changes,
@@ -620,7 +716,7 @@ void DoTick()
         }
         else
         {
-            live_change_sample s =
+            live_change s =
             {
                 new_freq // Frequency changes,
                 , new_pan // Panning changes,
@@ -2450,8 +2546,10 @@ void EditorControl()
                     }
 
                     // Copy to clipboard
-                    copied_note = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][0];
-                    copied_instr = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][1];
+                    if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][0] != -9999)
+                        copied_note = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][0];
+                    if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][1] != -9999)
+                        copied_instr = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][1];
 
                     // Preview note
                     if (pause_song && (inp->is_a_pressed() || goup || godown || goright || goleft))
@@ -2521,6 +2619,8 @@ void EditorControl()
                     // Set to 0 if it isn't set
                     if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] == -1 && inp->is_a_pressed())
                         phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] = copied_effect != -1 ? copied_effect : 0;
+                    if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x + 1] == -1 && inp->is_a_pressed())
+                        phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x + 1] = copied_effect_param != -1 ? copied_effect_param : 0x0000;
 
                     // Movement keys
                     if (goup || godown || goright || goleft)
@@ -2539,11 +2639,15 @@ void EditorControl()
                     }
 
                     // Copy to clipboard
-                    copied_effect = phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                    if (phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] != -1)
+                        copied_effect = phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x];
 
                     // Handle deletes
                     if (inp->is_b_pressed())
-                        phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1;
+                    {
+						phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1; // Clear effect
+						phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x + 1] = -1; // Clear effect param
+                    }
                 }
 
                 // Edit fx1,2,3 param
@@ -2581,7 +2685,8 @@ void EditorControl()
                     }
 
                     // Copy to clipboard
-                    copied_effect_param = phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                    if (phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] != -1)
+                        copied_effect_param = phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x];
 
                     // Handle deletes
                     if (inp->is_b_pressed())
@@ -3429,6 +3534,8 @@ void EditorControl()
                 // Set to 0 if it isn't set
                 if (tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x] == -1 && inp->is_a_pressed())
                     tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x] = copied_effect != -1 ? copied_effect : 0;
+                if (tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x + 1] == -1 && inp->is_a_pressed())
+                    tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x + 1] = copied_effect_param != -1 ? copied_effect_param : 0;
 
                 // Movement keys
                 if (goup || godown || goright || goleft)
@@ -3447,11 +3554,15 @@ void EditorControl()
                 }
 
                 // Copy to clipboard
-                copied_effect = tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                if (tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x] != -1)
+                    copied_effect = tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x];
 
                 // Handle deletes
                 if (inp->is_b_pressed())
-                    tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1;
+                {
+                    tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1; // Clear effect
+                    tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x + 1] = -1; // Clear param
+                }
             }
 
             // Edit fx1,2,3 param
@@ -3489,7 +3600,8 @@ void EditorControl()
                 }
 
                 // Copy to clipboard
-                copied_effect_param = tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                if (tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x] != -1)
+                    copied_effect_param = tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x];
 
                 // Handle deletes
                 if (inp->is_b_pressed())

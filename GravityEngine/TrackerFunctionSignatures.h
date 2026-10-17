@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "GravityEngineSDL.h"
 
 // Find string f in s
 bool str_contains(const std::string& s, const std::string& f);
@@ -34,6 +35,17 @@ GetNextEmpty(std::vector<T*>* vec);
 
 // Apply transposition from a chain
 void ApplyChainTransposition(int channel_index, int* f);
+
+// Get FX from Phrase and apply
+// channelnumber : The particular channel to play the step on
+// f : frequency to play
+// fx1 : FX1 to apply
+// fx1_p : FX1 parameter to apply
+// fx2 : FX2 to apply
+// fx2_p : FX2 parameter to apply
+// fx3 : FX3 to apply
+// fx3_p : FX3 parameter to apply
+void GetFX(int channel_index, ChannelType inst_type, int f, int fx1, int fx1_p, int fx2, int fx2_p, int fx3, int fx3_p);
 
 // Play step phrase
 // channelnumber : The particular channel to play the step on

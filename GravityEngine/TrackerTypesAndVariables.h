@@ -344,6 +344,14 @@ public:
 			}
             
             // TODO: Get and apply other functions
+            // Read and apply instrument functions
+            int table_fx1 = t->arr[tick_ptr][1];
+            int table_fx1_p = t->arr[tick_ptr][2];
+            int table_fx2 = t->arr[tick_ptr][3];
+            int table_fx2_p = t->arr[tick_ptr][4];
+            int table_fx3 = t->arr[tick_ptr][5];
+            int table_fx3_p = t->arr[tick_ptr][6];
+            GetFX(channelnumber, type, -9999, table_fx1, table_fx1_p, table_fx2, table_fx2_p, table_fx3, table_fx3_p);
 		}
 
         // Increment tick in table

@@ -212,7 +212,7 @@ void PreviewSample(int channel_index, int sample_index)
 }
 
 // DoEffect
-void DoFX(int channel_index, ChannelType inst_type, int f, int f_p)
+void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type t)
 {
     // Init voice
     GravityEngine_Voice* v;
@@ -221,19 +221,42 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p)
     else // Implicitly ChannelType::file
         v = audiosampler->voices[channel_index];
 
-    // Switch behavior on the fx
-    switch (fx[f])
+    // Execute the effect before the instrument settings are applied
+    if (t == before)
     {
-    case 'E': // E : Envelope
-        // TODO : Apply envelope logic
-        break;
-	case 'K': // K : Kill
-		// Kill the voice
-		v->will_stop_timer = f_p;
-		break;
-    case 'D': // D : Delay
-        // TODO : Apply delay logic
-        break;
+        // Switch behavior on the fx
+        switch (fx[f])
+        {
+        case 'D': // D : Delay
+            // Set the delay on the channel
+            if (channellist[channel_index].first_delay_passed == true)
+            {
+                channellist[channel_index].delay_ticks = f_p;
+                channellist[channel_index].delay_tick_offsetter = ticknumber;
+                channellist[channel_index].first_delay_passed = false;
+            }
+            else
+            {
+                channellist[channel_index].first_delay_passed = true;
+            }
+            break;
+        }
+    }
+
+	// Execute the effect after the instrument settings are applied
+    if (t == after)
+    {
+        // Switch behavior on the fx
+        switch (fx[f])
+        {
+        case 'E': // E : Envelope
+            // TODO : Apply envelope logic
+            break;
+        case 'K': // K : Kill
+            // Kill the voice
+            v->will_stop_timer = f_p;
+            break;
+        }
     }
 }
 
@@ -246,7 +269,8 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p)
 // fx2_p : FX2 parameter to apply
 // fx3 : FX3 to apply
 // fx3_p : FX3 parameter to apply
-void GetFX(int channel_index, ChannelType inst_type, int f, int fx1, int fx1_p, int fx2, int fx2_p, int fx3, int fx3_p)
+// FX_Exec_Type t : Type of execution
+void GetFX(int channel_index, ChannelType inst_type, int f, int fx1, int fx1_p, int fx2, int fx2_p, int fx3, int fx3_p, FX_Exec_Type t)
 {
     // Init voice
     GravityEngine_Voice* v;
@@ -266,21 +290,21 @@ void GetFX(int channel_index, ChannelType inst_type, int f, int fx1, int fx1_p, 
     if (fx1 != -1 && fx1_p != -1)
     {
         // Apply FX1 logic
-		DoFX(channel_index, inst_type, fx1, fx1_p);
+		DoFX(channel_index, inst_type, fx1, fx1_p, t);
     }
 
     // Apply effect 2
     if (fx2 != -1 && fx2_p != -1)
     {
         // Apply FX2 logic
-		DoFX(channel_index, inst_type, fx2, fx2_p);
+		DoFX(channel_index, inst_type, fx2, fx2_p, t);
     }
 
     // Apply effect 3
     if (fx3 != -1 && fx3_p != -1)
     {
         // Apply FX3 logic
-		DoFX(channel_index, inst_type, fx3, fx3_p);
+		DoFX(channel_index, inst_type, fx3, fx3_p, t);
     }
 
 }
@@ -364,7 +388,7 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->frames_per_tick = frames_per_tick;
 
             // Read and apply instrument functions
-            GetFX(channel_index, channellist[channel_index].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p);
+            GetFX(channel_index, channellist[channel_index].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, after);
 
             v->will_start_playing = true;
         }
@@ -412,7 +436,7 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->frames_per_tick = frames_per_tick;
 
             // Read and apply instrument functions
-            GetFX(channel_index, channellist[channel_index].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p);
+            GetFX(channel_index, channellist[channel_index].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, after);
 
             v->will_start_playing = true;
         }
@@ -425,7 +449,7 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             ApplyChainTransposition(channel_index, &f);
 
         // Read and apply instrument functions
-        GetFX(channel_index, channellist[channel_index].type, f, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p);
+        GetFX(channel_index, channellist[channel_index].type, f, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, after);
     }
 }
 
@@ -633,6 +657,70 @@ double BpmToTicklength(int b)
     return 1000000000.0 / TicksPerSecond(b, tps);
 }
 
+// A package of all the changes that will be applied to a voice during a substep. The audio thread will read these values and apply them to the voice.
+// int channel_index : channel to simulate
+void SubStepTickHelper(int channel_index)
+{
+    double new_freq = 0.0;
+    double new_pan = 0.5;
+    double new_vol = 1.0;
+    double new_ctf = 1.0;
+    double new_res = 0.5;
+    double new_pw = 0.5;
+
+    // Staging variables for the changes that will be written to the synths and samples
+    if (channellist[channel_index].type == ChannelType::synth)
+    {
+        new_freq = audiosynth->voices[channel_index]->stg_base_freq;
+        new_pan = audiosynth->voices[channel_index]->stg_panning;
+        new_vol = audiosynth->voices[channel_index]->stg_volume;
+        new_ctf = audiosynth->voices[channel_index]->stg_cutoff;
+        new_res = audiosynth->voices[channel_index]->stg_resonance;
+        new_pw = audiosynth->voices[channel_index]->stg_pulse_width;
+    }
+    else
+    {
+        new_freq = audiosampler->voices[channel_index]->stg_step_freq;
+        new_pan = audiosampler->voices[channel_index]->stg_panning;
+        new_vol = audiosampler->voices[channel_index]->stg_volume;
+        new_ctf = audiosampler->voices[channel_index]->stg_cutoff;
+        new_res = audiosampler->voices[channel_index]->stg_resonance;
+    }
+
+    // Get all changes to the sound
+    if (!pause_song || play_context == pt_preview)
+        channellist[channel_index].sub_step(&new_freq);
+    if (channellist[channel_index].type == ChannelType::synth) audiosynth->SynthAutomation(&new_freq, &new_pan, &new_pw, &new_vol, &new_ctf, &new_res, channel_index); // Run synth automation on animated variables
+    if (channellist[channel_index].type == ChannelType::file) audiosampler->SampleAutomation(&new_freq, &new_pan, &new_vol, &new_ctf, &new_res, channel_index); // Run sample automation on animated variables
+
+    // Submit changes throughout the substep
+    if (channellist[channel_index].type == ChannelType::synth)
+    {
+        live_change s =
+        {
+            new_freq // Frequency changes,
+            , new_pan // Panning changes,
+            , new_vol // Volume changes,
+            , new_pw // Pulse width changes,
+            , new_ctf// Cutoff changes,
+            , new_res // Resonance changes
+        };
+        audiosynth->voices[channel_index]->live_changes.push(s);
+    }
+    else
+    {
+        live_change s =
+        {
+            new_freq // Frequency changes,
+            , new_pan // Panning changes,
+            , new_vol // Volume changes,
+            , new_ctf // Cutoff changes,
+            , new_res // Resonance changes
+        };
+        audiosampler->voices[channel_index]->live_changes.push(s);
+    }
+}
+
 // Execute tick
 // ------------
 // This is the tick loop; All song execution should go inside this function
@@ -640,13 +728,6 @@ double BpmToTicklength(int b)
 void DoTick()
 {
     std::scoped_lock lock(audiosampler->batch_mutex, audiosynth->batch_mutex);
-
-    if (ticknumber % std::max(1, tps) == 0)
-    {
-        // Step the channel sequencers
-        for (int i = 0; i < channelcount; i++)
-            if (!pause_song) channellist[i].step();
-    }
 
     // Do Sub-step Code --
 
@@ -657,75 +738,100 @@ void DoTick()
             continue;
         if ((play_context == pt_song || play_context == pt_phrase_all || play_context == pt_chain_all) && channellist[i].cant_play)
             continue;
-
-        // Idle voices need no automation and no queue pushes. They used to be pushed to on every tick
-        // forever (filling their 1024-entry queues, and sweeping stg_swpd_freq off to Inf/0).
-        if (channellist[i].type == ChannelType::synth)
+        if (channellist[i].delay_ticks > 0)
         {
-            if (!audiosynth->voices[i]->start_playing && !audiosynth->voices[i]->will_start_playing)
-                continue;
-        }
-        else if (!audiosampler->voices[i]->start_playing && !audiosampler->voices[i]->will_start_playing)
+            channellist[i].delay_ticks--;
+            channellist[i].catchup_ticks++;
+            // Run anything on this channel that should run regardless of delay
+            SubStepTickHelper(i);
+            // Continue to next channel
             continue;
-
-        double new_freq = 0.0;
-        double new_pan = 0.5;
-        double new_vol = 1.0;
-        double new_ctf = 1.0;
-        double new_res = 0.5;
-        double new_pw = 0.5;
-
-        // Staging variables for the changes that will be written to the synths and samples
-        if (channellist[i].type == ChannelType::synth)
-        {
-            new_freq = audiosynth->voices[i]->stg_base_freq;
-            new_pan = audiosynth->voices[i]->stg_panning;
-            new_vol = audiosynth->voices[i]->stg_volume;
-            new_ctf = audiosynth->voices[i]->stg_cutoff;
-            new_res = audiosynth->voices[i]->stg_resonance;
-            new_pw = audiosynth->voices[i]->stg_pulse_width;
-        }
-        else
-        {
-            new_freq = audiosampler->voices[i]->stg_step_freq;
-            new_pan = audiosampler->voices[i]->stg_panning;
-            new_vol = audiosampler->voices[i]->stg_volume;
-            new_ctf = audiosampler->voices[i]->stg_cutoff;
-            new_res = audiosampler->voices[i]->stg_resonance;
         }
 
-        // Get all changes to the sound
-        if (!pause_song || play_context == pt_preview)
-            channellist[i].sub_step(&new_freq);
-        if (channellist[i].type == ChannelType::synth) audiosynth->SynthAutomation(&new_freq, &new_pan, &new_pw, &new_vol, &new_ctf, &new_res, i); // Run synth automation on animated variables
-        if (channellist[i].type == ChannelType::file) audiosampler->SampleAutomation(&new_freq, &new_pan, &new_vol, &new_ctf, &new_res, i); // Run sample automation on animated variables
+        // Save the ticknumber in case we need to catch up
+		int saved_ticknumber = ticknumber;
 
-        // Submit changes throughout the substep
-        if (channellist[i].type == ChannelType::synth)
+        // Does a catchup need to occur?
+        if (channellist[i].catchup_ticks > 0)
         {
-            live_change s =
+			ticknumber = channellist[i].delay_tick_offsetter;
+        }
+
+        // Advance
+        do
+        {
+            // Do not simulate before effects on preview
+            if (play_context != pt_preview)
             {
-                new_freq // Frequency changes,
-                , new_pan // Panning changes,
-                , new_vol // Volume changes,
-                , new_pw // Pulse width changes,
-                , new_ctf// Cutoff changes,
-                , new_res // Resonance changes
-            };
-            audiosynth->voices[i]->live_changes.push(s);
-        }
-        else
-        {
-            live_change s =
+                // Handle different depending on whether this is real-time or we are catching up to real-time.
+                if (ticknumber % std::max(1, tps) == 0)
+                {
+                    // Phrase before FX
+                    auto fx1 = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][2];
+                    auto fx1_p = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][3];
+                    auto fx2 = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][4];
+                    auto fx2_p = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][5];
+                    auto fx3 = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][6];
+                    auto fx3_p = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][7];
+                    GetFX(i, channellist[i].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, before);
+                }
+
+                // Table before FX
+                if (channellist[i].playing_table != -1)
+                {
+                    auto fx1 = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][1];
+                    auto fx1_p = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][2];
+                    auto fx2 = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][3];
+                    auto fx2_p = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][4];
+                    auto fx3 = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][5];
+                    auto fx3_p = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][6];
+                    GetFX(i, channellist[i].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, before);
+                }
+            }
+
+			// If we encountered a delay, we need to break out of this channel's execution
+            if (channellist[i].delay_ticks > 0)
             {
-                new_freq // Frequency changes,
-                , new_pan // Panning changes,
-                , new_vol // Volume changes,
-                , new_ctf // Cutoff changes,
-                , new_res // Resonance changes
-            };
-            audiosampler->voices[i]->live_changes.push(s);
-        }
+                // Don't forget to account for the first tick skipped!
+                channellist[i].delay_ticks--;
+                channellist[i].catchup_ticks++;
+                SubStepTickHelper(i);
+                break;
+            }
+
+			// Handle different depending on whether this is real-time or we are catching up to real-time.
+            if (ticknumber % std::max(1, tps) == 0)
+            {
+                // Step the channel sequencers
+                if (!pause_song) channellist[i].step();
+            }
+
+            // Idle voices need no automation and no queue pushes. They used to be pushed to on every tick
+            // forever (filling their 1024-entry queues, and sweeping stg_swpd_freq off to Inf/0).
+            if (channellist[i].type == ChannelType::synth)
+            {
+                if (!audiosynth->voices[i]->start_playing && !audiosynth->voices[i]->will_start_playing)
+                    continue;
+            }
+            else if (!audiosampler->voices[i]->start_playing && !audiosampler->voices[i]->will_start_playing)
+                continue;
+
+			// Do not run tick-level automation stuff on catchup ticks - This is to be played relative to the start of a step, so if the step is delayed, the automation should be delayed as well.
+            if (channellist[i].catchup_ticks <= 0)
+            {
+                SubStepTickHelper(i);
+            }
+
+			// Decrement catchup ticks
+            if (channellist[i].catchup_ticks > 0)
+            {
+                ticknumber++;
+                channellist[i].catchup_ticks--;
+            }
+		} while (channellist[i].catchup_ticks > 0);
+
+        // Restore ticknumber
+        ticknumber = saved_ticknumber;
     }
 
     // Increment global song position in ticks --
@@ -2218,6 +2324,10 @@ void EditorControl()
                 channellist[playing_channel].playing_phrase = -1;
                 channellist[playing_channel].step_ptr = 0;
                 channellist[playing_channel].tick_ptr = 0;
+                channellist[playing_channel].delay_ticks = 0;
+                channellist[playing_channel].delay_tick_offsetter = 0;
+                channellist[playing_channel].catchup_ticks = 0;
+                channellist[playing_channel].first_delay_passed = true;
                 ticknumber = 0;
                 // Set the scope of play to only this phrase
                 play_context = pt_chain;
@@ -2449,6 +2559,10 @@ void EditorControl()
                 channellist[playing_channel].playing_phrase = open_phrase;
                 channellist[playing_channel].step_ptr = 0;
                 channellist[playing_channel].tick_ptr = 0;
+                channellist[playing_channel].delay_ticks = 0;
+                channellist[playing_channel].delay_tick_offsetter = 0;
+                channellist[playing_channel].catchup_ticks = 0;
+                channellist[playing_channel].first_delay_passed = true;
                 ticknumber = 0;
                 // Set the scope of play to only this phrase
                 play_context = pt_phrase;

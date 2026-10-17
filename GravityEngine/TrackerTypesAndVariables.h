@@ -321,6 +321,10 @@ public:
     std::atomic<int> playing_freq = -9999;
     std::atomic<int> playing_instrument = -1;
     std::atomic<bool> cant_play = false;
+    std::atomic<int> delay_ticks = 0;
+    std::atomic<int> delay_tick_offsetter = 0;
+    std::atomic<int> catchup_ticks = 0;
+    std::atomic<bool> first_delay_passed = true;
 
     // Count tick
     void sub_step(double* freq)
@@ -341,18 +345,17 @@ public:
                     play_context == pt_preview ? open_phrase : playing_phrase.load(),
                     play_context == pt_preview ? cursor_y + offset_y : step_ptr.load() - 1,
                     table_trsp, freq);
-			}
             
-            // TODO: Get and apply other functions
-            // Read and apply instrument functions
-            int table_fx1 = t->arr[tick_ptr][1];
-            int table_fx1_p = t->arr[tick_ptr][2];
-            int table_fx2 = t->arr[tick_ptr][3];
-            int table_fx2_p = t->arr[tick_ptr][4];
-            int table_fx3 = t->arr[tick_ptr][5];
-            int table_fx3_p = t->arr[tick_ptr][6];
-            GetFX(channelnumber, type, -9999, table_fx1, table_fx1_p, table_fx2, table_fx2_p, table_fx3, table_fx3_p);
-		}
+                // Read and apply instrument functions
+                int table_fx1 = t->arr[tick_ptr][1];
+                int table_fx1_p = t->arr[tick_ptr][2];
+                int table_fx2 = t->arr[tick_ptr][3];
+                int table_fx2_p = t->arr[tick_ptr][4];
+                int table_fx3 = t->arr[tick_ptr][5];
+                int table_fx3_p = t->arr[tick_ptr][6];
+                GetFX(channelnumber, type, -9999, table_fx1, table_fx1_p, table_fx2, table_fx2_p, table_fx3, table_fx3_p, after);
+            }
+        }
 
         // Increment tick in table
         tick_ptr++;
@@ -402,6 +405,10 @@ public:
         step_ptr = 0;
         tick_ptr = 0;
         ticknumber = 0;
+        delay_ticks = 0;
+        delay_tick_offsetter = 0;
+        catchup_ticks = 0;
+        first_delay_passed = true;
         bool first = true;
 
         // Keep moving back til we get to a valid play point to play at

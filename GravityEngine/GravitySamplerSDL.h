@@ -283,9 +283,7 @@ public:
                                     v->start_playing = false;
                                 }
                                 if (v->will_stop_timer > -1)
-                                {
                                     v->will_stop_timer--;
-                                }
                             }
                         }
                     }

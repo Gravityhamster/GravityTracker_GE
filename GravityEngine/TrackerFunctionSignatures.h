@@ -36,6 +36,13 @@ GetNextEmpty(std::vector<T*>* vec);
 // Apply transposition from a chain
 void ApplyChainTransposition(int channel_index, int* f);
 
+// FX execution type
+enum FX_Exec_Type
+{
+    before,
+    after
+};
+
 // Get FX from Phrase and apply
 // channelnumber : The particular channel to play the step on
 // f : frequency to play
@@ -45,7 +52,8 @@ void ApplyChainTransposition(int channel_index, int* f);
 // fx2_p : FX2 parameter to apply
 // fx3 : FX3 to apply
 // fx3_p : FX3 parameter to apply
-void GetFX(int channel_index, ChannelType inst_type, int f, int fx1, int fx1_p, int fx2, int fx2_p, int fx3, int fx3_p);
+// FX_Exec_Type t : Type of execution
+void GetFX(int channel_index, ChannelType inst_type, int f, int fx1, int fx1_p, int fx2, int fx2_p, int fx3, int fx3_p, FX_Exec_Type t);
 
 // Play step phrase
 // channelnumber : The particular channel to play the step on
@@ -101,6 +109,10 @@ int DeepCopyChain(int chain_index);
 // Beats-per-minute to Tick length in nanoseconds
 // b : bpm
 double BpmToTicklength(int b);
+
+// A package of all the changes that will be applied to a voice during a substep. The audio thread will read these values and apply them to the voice.
+// int channel_index : channel to simulate
+void SubStepTickHelper(int channel_index);
 
 // Execute tick
 // ------------

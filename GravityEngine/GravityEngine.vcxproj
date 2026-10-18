@@ -23,6 +23,7 @@
     <ClInclude Include="GravityEngineTypes.h" />
     <ClInclude Include="GravitySamplerSDL.h" />
     <ClInclude Include="GravitySynthSDL.h" />
+    <ClInclude Include="GravityTempo.h" />
     <ClInclude Include="SPSC_Queue.h" />
   </ItemGroup>
   <ItemGroup>

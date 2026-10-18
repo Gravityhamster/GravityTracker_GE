@@ -30,6 +30,9 @@
     <ClInclude Include="GravityEngineTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GravityTempo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Gravitytracker.cpp">

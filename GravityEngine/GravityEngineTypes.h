@@ -127,6 +127,7 @@ class GravityEngine_Voice
 
 public:
     SpscQueue<live_change, 1024> live_changes;
+    std::atomic<int> my_bpm = 0;
     std::atomic<int> frame_counter = 0;
     std::atomic<float> frames_per_tick = 0;
 

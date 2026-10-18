@@ -58,7 +58,8 @@ extern int inputholdtimer; // The timer for checking if an input should be consi
 extern int inputholdthreshold; // Frames til in input should start repeating
 extern int inputholddelay; // How many frames to skip on hold (2 == every other, 3 == every other 3, etc.) 
 extern int rowcount; // How many rows in the song - 65535 chains * 16 phrases * 16 steps = 16776960 steps / 4 steps = 4194240 beats
-extern int bpm; // Beats per minute of the song
+extern std::atomic<int> bpm; // Beats per minute of the song
+extern int set_bpm;
 extern int tps; // Ticks per step of the song
 extern int fps; // Frame rate in hz of the UI
 extern double ticklength; // Nanoseconds per tick

@@ -19,7 +19,8 @@ int inputholdtimer = 0;
 int inputholdthreshold = 15;
 int inputholddelay = 2;
 int rowcount = 0xffff;
-int bpm = 295;
+std::atomic<int> bpm = 125;
+int set_bpm = bpm.load();
 int tps = 6;
 int fps = 60;
 double ticklength = 0;
@@ -50,8 +51,8 @@ int playing_channel = -1;
 int open_instrument = -1;
 int open_sample = -1;
 int open_table = -1;
-int fx_length = 4;
-char fx[] = { 'E', 'V', 'K', 'D' };
+int fx_length = 5;
+char fx[] = { 'E', 'V', 'K', 'D', 'T'};
 int min_note = -12;
 int max_note = 107;
 bool pause_song = true;
@@ -152,7 +153,7 @@ void PreGameLoop()
         std::to_string(channellist[0].chain_ptr) + " - " +
         std::to_string(channellist[0].phrase_ptr) + " - " +
         std::to_string(channellist[0].step_ptr) + " - " +
-        std::to_string(channellist[0].tick_ptr) + "     ",
+        std::to_string(channellist[0].tick_ptr) + "     " + std::to_string(bpm.load()),
         primary_text_a);
 }
 

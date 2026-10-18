@@ -18,6 +18,10 @@
 #include <cstdint>
 #include "SPSC_Queue.h"
 #include "GravityEngineTypes.h"
+#include "GravityTempo.h"
+
+// Get BPM from the tracker
+extern std::atomic<int> bpm;
 
 // For flushing denormal floats to zero (x86/x64 only)
 #if defined(__SSE__) || defined(_M_X64) || defined(_M_IX86)
@@ -208,6 +212,22 @@ public:
 
                         if (!v->start_playing)
                             continue;
+
+                        // Has BPM changed?
+                        auto global_bpm = bpm.load();
+                        if (global_bpm != v->my_bpm)
+                        {
+                            v->my_bpm = global_bpm;
+
+                            const double old_fpt = v->frames_per_tick.load();
+                            const double new_fpt = GravityFramesPerTick(spec->freq, global_bpm, tps);
+
+                            // Keep the same fractional progress through the current tick
+                            if (old_fpt > 0.0)
+                                v->tick_acc = (v->tick_acc / old_fpt) * new_fpt;
+
+                            v->frames_per_tick = (float)new_fpt;
+                        }
 
                         // -= Apply queued parameter changes (one per tick) =-
                         const double fpt = v->frames_per_tick.load();

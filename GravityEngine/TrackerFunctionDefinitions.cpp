@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <system_error>
+#include "GravityTempo.h"
 
 // Find string f in s
 bool str_contains(const std::string& s, const std::string& f) { return s.find(f) != std::string::npos; }
@@ -97,18 +98,10 @@ GetNextEmpty(std::vector<T*>* vec)
     return index;
 }
 
-// Ticks per second for the current bpm/tps.
-// Real division: the old integer division snapped the tempo to whole ticks-per-second, so with tps = 6
-// bpm 121 and 122 played at the same speed as 120. Clamped so a zero tempo can't divide by zero.
-static double TicksPerSecond(int b, int ticks_per_step)
-{
-    return std::max(1.0, ((double)b * ticks_per_step * 4.0) / 60.0);
-}
-
 // Audio frames per tracker tick at the current tempo
 static double FramesPerTick()
 {
-    return (double)geptr->global_audio_spec.freq / TicksPerSecond(bpm, tps);
+    return GravityFramesPerTick(geptr->global_audio_spec.freq, bpm, tps);
 }
 
 // Wrap a note number into [min_note, max_note] in O(1).
@@ -211,6 +204,23 @@ void PreviewSample(int channel_index, int sample_index)
     v->will_start_playing = true;
 }
 
+// Change BPM
+// int bpm : New BPM value
+void ChangeBPM(int new_bpm)
+{
+    std::scoped_lock lock(audiosampler->batch_mutex, audiosynth->batch_mutex);
+
+	// Clamp bpm to 1-999
+	if (new_bpm < 1)
+		new_bpm = 1;
+	if (new_bpm > 999)
+		new_bpm = 999;
+	// Set bpm
+	bpm = new_bpm;
+    // Get the length of the tick
+    ticklength = BpmToTicklength(bpm);
+}
+
 // DoEffect
 void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type t)
 {
@@ -239,6 +249,9 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type
             {
                 channellist[channel_index].first_delay_passed = true;
             }
+            break;
+        case 'T': // T : Time
+			ChangeBPM(f_p);
             break;
         }
     }
@@ -381,6 +394,7 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->resonance = instrumentlist[i]->resonance;
             v->waveform = instrumentlist[i]->waveform;
             v->filter = instrumentlist[i]->filter;
+			v->my_bpm = bpm.load();
 
             // Prepare synth queueing variables
             double frames_per_tick = FramesPerTick();
@@ -429,6 +443,7 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->cutoff = instrumentlist[i]->cutoff;
             v->resonance = instrumentlist[i]->resonance;
             v->filter = instrumentlist[i]->filter;
+            v->my_bpm = bpm.load();
 
             // Prepare synth queueing variables
             double frames_per_tick = FramesPerTick();
@@ -654,7 +669,7 @@ double BpmToTicklength(int b)
     // 7080 ticks per minute / 60 seconds = 118 ticks per second
     // = 1 tick every 1/118th of a second
     // TickLength = 1000000000 / 118 nano seconds
-    return 1000000000.0 / TicksPerSecond(b, tps);
+    return 1000000000.0 / GravityTicksPerSecond(b, tps);
 }
 
 // A package of all the changes that will be applied to a voice during a substep. The audio thread will read these values and apply them to the voice.
@@ -2038,6 +2053,8 @@ void StopSequenceThread()
     running = false;
     while (play_thread)
         std::this_thread::yield();
+    // Reset BPM in case it was touched in playback
+    ChangeBPM(set_bpm);
 }
 
 // Handle deep copy inputs

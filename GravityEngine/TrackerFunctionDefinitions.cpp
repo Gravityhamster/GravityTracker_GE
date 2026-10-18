@@ -329,7 +329,7 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
     auto fx2_p = cur_phrase->arr[step_ptr][5];
     auto fx3 = cur_phrase->arr[step_ptr][6];
     auto fx3_p = cur_phrase->arr[step_ptr][7];
-    // If no note is present, no need to play
+    // If no note is present, or the sequencer is catching up from a delayed state, no need to play audibly
     if (f != -9999 && GetAt(&instrumentlist, i) != nullptr)
     {
         // Set the type of audio playing on the channel
@@ -804,16 +804,17 @@ void DoTick()
             {
                 // Step the channel sequencers
                 if (!pause_song) channellist[i].step();
+                SubStepTickHelper(i);
             }
 
             // Idle voices need no automation and no queue pushes. They used to be pushed to on every tick
             // forever (filling their 1024-entry queues, and sweeping stg_swpd_freq off to Inf/0).
             if (channellist[i].type == ChannelType::synth)
             {
-                if (!audiosynth->voices[i]->start_playing && !audiosynth->voices[i]->will_start_playing)
+                if (!audiosynth->voices[i]->start_playing && !audiosynth->voices[i]->will_start_playing && channellist[i].catchup_ticks <= 0)
                     continue;
             }
-            else if (!audiosampler->voices[i]->start_playing && !audiosampler->voices[i]->will_start_playing)
+            else if (!audiosampler->voices[i]->start_playing && !audiosampler->voices[i]->will_start_playing && channellist[i].catchup_ticks <= 0)
                 continue;
 
 			// Do not run tick-level automation stuff on catchup ticks - This is to be played relative to the start of a step, so if the step is delayed, the automation should be delayed as well.

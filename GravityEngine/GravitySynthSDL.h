@@ -491,7 +491,7 @@ public:
         // Step volume
         if (voices[voice_index]->volume_freq != 0)
         {
-            (*new_vol) = voices[voice_index]->stg_volume + voices[voice_index]->volume_freq / 200;
+            (*new_vol) = voices[voice_index]->stg_volume + (voices[voice_index]->volume_freq * 16) / 200;
             if ((*new_vol) < 0)
                 (*new_vol) = 0;
             voices[voice_index]->stg_volume = (*new_vol);
@@ -499,7 +499,7 @@ public:
         // Step cutoff
         if (voices[voice_index]->cutoff_freq != 0)
         {
-            (*new_cutoff) = voices[voice_index]->stg_cutoff + voices[voice_index]->cutoff_freq / 200;
+            (*new_cutoff) = voices[voice_index]->stg_cutoff + (voices[voice_index]->cutoff_freq * 16) / 200;
             if ((*new_cutoff) < 0)
                 (*new_cutoff) = 0;
             if ((*new_cutoff) > 1)
@@ -509,7 +509,7 @@ public:
         // Step resonance
         if (voices[voice_index]->resonance_freq != 0)
         {
-            (*new_resonance) = voices[voice_index]->stg_resonance + voices[voice_index]->resonance_freq / 200;
+            (*new_resonance) = voices[voice_index]->stg_resonance + (voices[voice_index]->resonance_freq * 16) / 200;
             if ((*new_resonance) < 0)
                 (*new_resonance) = 0;
             if ((*new_resonance) > 1)

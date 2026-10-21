@@ -259,11 +259,21 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type
 	// Execute the effect after the instrument settings are applied
     if (t == after)
     {
+        std::string outstr;
         // Switch behavior on the fx
         switch (fx[f])
         {
         case 'E': // E : Envelope
-            // TODO : Apply envelope logic
+            // Set volume freq
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->volume_freq = (std::stoi(outstr.substr(0, 4), 0, 16) - 32768) / 32768.f;
+            break;
+        case 'V': // V : Volume
+            // Set volume
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->stg_volume = std::stoi(outstr.substr(0, 4), 0, 16) / 65535.f;
             break;
         case 'K': // K : Kill
             // Kill the voice
@@ -401,9 +411,24 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->frame_counter = frames_per_tick;
             v->frames_per_tick = frames_per_tick;
 
-            // Read and apply instrument functions
+            // Read and apply step effects
             GetFX(channel_index, channellist[channel_index].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, after);
 
+            // Read and apply table effects
+            if (t != nullptr)
+            {
+                channellist[channel_index].skip_next_fx = true;
+                // Read and apply instrument functions
+                int table_fx1 = t->arr[0][1];
+                int table_fx1_p = t->arr[0][2];
+                int table_fx2 = t->arr[0][3];
+                int table_fx2_p = t->arr[0][4];
+                int table_fx3 = t->arr[0][5];
+                int table_fx3_p = t->arr[0][6];
+                GetFX(channel_index, channellist[channel_index].type, -9999, table_fx1, table_fx1_p, table_fx2, table_fx2_p, table_fx3, table_fx3_p, after);
+            }
+
+            // Signal the voice to play
             v->will_start_playing = true;
         }
         else if (instrumentlist[i]->type == ChannelType::file && instrumentlist[i]->sample_index != -1)
@@ -453,6 +478,21 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             // Read and apply instrument functions
             GetFX(channel_index, channellist[channel_index].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, after);
 
+            // Read and apply table effects
+            if (t != nullptr)
+            {
+                channellist[channel_index].skip_next_fx = true;
+                // Read and apply instrument functions
+                int table_fx1 = t->arr[0][1];
+                int table_fx1_p = t->arr[0][2];
+                int table_fx2 = t->arr[0][3];
+                int table_fx2_p = t->arr[0][4];
+                int table_fx3 = t->arr[0][5];
+                int table_fx3_p = t->arr[0][6];
+                GetFX(channel_index, channellist[channel_index].type, -9999, table_fx1, table_fx1_p, table_fx2, table_fx2_p, table_fx3, table_fx3_p, after);
+            }
+
+            // Signal the voice to play
             v->will_start_playing = true;
         }
     }
@@ -819,7 +859,7 @@ void DoTick()
             {
                 // Step the channel sequencers
                 if (!pause_song) channellist[i].step();
-                SubStepTickHelper(i);
+                if (channellist[i].catchup_ticks > 0) SubStepTickHelper(i);
             }
 
             // Idle voices need no automation and no queue pushes. They used to be pushed to on every tick
@@ -3117,27 +3157,27 @@ void EditorControl()
                     outstr = IntToHexString(instrumentlist[open_instrument]->volume_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     instrumentlist[open_instrument]->volume = std::stoi(outstr.substr(0, 2), 0, 16) / 255.f;
-                    instrumentlist[open_instrument]->volume_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 8.f;
+                    instrumentlist[open_instrument]->volume_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f;
                     outstr = IntToHexString(instrumentlist[open_instrument]->pan_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     if (outstr.substr(0, 2) == "80")
                         instrumentlist[open_instrument]->panning = 0.5f;
                     else
                         instrumentlist[open_instrument]->panning = std::stoi(outstr.substr(0, 2), 0, 16) / 255.f;
-                    instrumentlist[open_instrument]->pan_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 8.f; // std::stoi(outstr.substr(2, 2), 0, 16) / 16.f;
+                    instrumentlist[open_instrument]->pan_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f; // std::stoi(outstr.substr(2, 2), 0, 16) / 16.f;
                     outstr = IntToHexString(instrumentlist[open_instrument]->pw_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     instrumentlist[open_instrument]->pulse_width = (std::stoi(outstr.substr(0, 2), 0, 16) / 255.f) - 0.5f;
                     instrumentlist[open_instrument]->pulse_width_freq = std::stoi(outstr.substr(2, 2), 0, 16) / 16.f;
-                    instrumentlist[open_instrument]->pitch_freq = (instrumentlist[open_instrument]->pitch_freq_edit - 32768) / (65535.f / 2.f);
+                    instrumentlist[open_instrument]->pitch_freq = (instrumentlist[open_instrument]->pitch_freq_edit - 32768) / 32768.f;
                     outstr = IntToHexString(instrumentlist[open_instrument]->cutoff_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     instrumentlist[open_instrument]->cutoff = std::stoi(outstr.substr(0, 2), 0, 16) / 255.f;
-                    instrumentlist[open_instrument]->cutoff_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 8.f;
+                    instrumentlist[open_instrument]->cutoff_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f;
                     outstr = IntToHexString(instrumentlist[open_instrument]->resonance_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     instrumentlist[open_instrument]->resonance = instrumentlist[open_instrument]->resonance_edit / 65535.f;
-                    instrumentlist[open_instrument]->resonance_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 8.f;
+                    instrumentlist[open_instrument]->resonance_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f;
                 }
             }
             // Goto page
@@ -3499,7 +3539,7 @@ void EditorControl()
                     outstr = IntToHexString(instrumentlist[open_instrument]->volume_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     instrumentlist[open_instrument]->volume = std::stoi(outstr.substr(0, 2), 0, 16) / 255.f;
-                    instrumentlist[open_instrument]->volume_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 8.f;
+                    instrumentlist[open_instrument]->volume_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f;
                     outstr = IntToHexString(instrumentlist[open_instrument]->pan_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     if (outstr.substr(0, 2) == "80")
@@ -3511,11 +3551,11 @@ void EditorControl()
                     outstr = IntToHexString(instrumentlist[open_instrument]->cutoff_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     instrumentlist[open_instrument]->cutoff = std::stoi(outstr.substr(0, 2), 0, 16) / 255.f;
-                    instrumentlist[open_instrument]->cutoff_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 8.f;
+                    instrumentlist[open_instrument]->cutoff_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f;
                     outstr = IntToHexString(instrumentlist[open_instrument]->resonance_edit);
                     outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
                     instrumentlist[open_instrument]->resonance = instrumentlist[open_instrument]->resonance_edit / 65535.f;
-                    instrumentlist[open_instrument]->resonance_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 8.f;
+                    instrumentlist[open_instrument]->resonance_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f;
                 }
             }
             // Goto page

@@ -70,6 +70,7 @@ bool alt_mode = false;
 menu state = m_song;
 int inputgetter;
 int** songgrid;
+settings* global_settings;
 
 // Data structures
 std::vector<instrument*> instrumentlist;
@@ -106,6 +107,7 @@ void GameInit()
 	// Init synth
 	audiosynth = new GravityEngine_Synth();
 	audiosampler = new GravityEngine_Sampler();
+    global_settings = new settings();
 
     // Init channel sequencers
     for (int i = 0; i < channelcount; i++)
@@ -194,6 +196,7 @@ int main()
         delete o;
     for (auto o : tablelist)
         delete o;
+    delete global_settings;
     running = false;
 
     // Report success to host

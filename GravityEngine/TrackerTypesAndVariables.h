@@ -112,6 +112,47 @@ extern int** songgrid; //[0xffff][64];
 
 // Tracker object concepts --
 
+// Settings
+class settings
+{
+public:
+    enum setting_type
+    {
+        fourbithex,
+        button
+    };
+
+    std::vector<std::string> setting_labels;
+    std::vector<std::atomic<int>*> setting_pointers;
+    std::vector<std::tuple<int, int>> setting_ranges;
+    std::vector<setting_type> setting_types;
+
+    settings()
+    {
+        // BPM
+        setting_labels.push_back("BPM");
+        setting_pointers.push_back(&bpm);
+        setting_ranges.push_back({ 40, 295 });
+        setting_types.push_back(fourbithex);
+
+        // Save
+        setting_labels.push_back("SAVE");
+        setting_pointers.push_back(nullptr);
+        setting_ranges.push_back({ -1, -1 });
+        setting_types.push_back(button);
+
+        // Load
+        setting_labels.push_back("LOAD");
+        setting_pointers.push_back(nullptr);
+        setting_ranges.push_back({ -1, -1 });
+        setting_types.push_back(button);
+    }
+
+    ~settings() {}
+};
+
+extern settings* global_settings;
+
 // Chains - Lists of phrases
 class chain
 {

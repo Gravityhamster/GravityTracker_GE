@@ -904,6 +904,30 @@ std::string IntToHexString(int i)
     return buf;
 }
 
+// Draw Options Editor UI
+void DrawOptionsUI()
+{
+    // Menu title
+    geptr->DrawTextString(0, 1, geptr->entity, "OPTIONS", primary_text_a);
+
+    // Draw all the settings
+    int options_count = global_settings->setting_labels.size();
+    for (int i = 0; i < options_count; i++)
+    {
+        // Draw the setting
+        geptr->DrawTextString(0, 3 + i, geptr->entity, global_settings->setting_labels[i], primary_text_a);
+        // Draw the value
+        if (global_settings->setting_types[i] == settings::fourbithex)
+        {
+            geptr->DrawChar(4, 3 + i, geptr->entity, ':');
+            geptr->DrawSetColor(4, 3 + i, geptr->entity, primary_text_a);
+            auto outstr = IntToHexString(*global_settings->setting_pointers[i]);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            geptr->DrawTextString(6, 3 + i, geptr->entity, outstr, primary_text_a);
+        }
+    }
+}
+
 // Draw Song Editor UI
 // off_x : UI offset on the x axis
 // off_y : UI offset on the y axis
@@ -2182,6 +2206,36 @@ void EditorControl()
     else
         leftrightcenter = center;
 
+    // Handle input for the settings menu
+    if (state == m_options && !breakend)
+    {
+        // Handle edits
+        if (inp->is_a_down())
+        {
+        }
+        // Handle navigation
+        else if (inp->is_select_down())
+        {
+            // Go to the page below
+            if (godown)
+            {
+                // Song
+                state = m_song;
+                cursor_x = SDL_clamp(cursor_x, 0, song_grid_w - 1);
+                cursor_y = SDL_clamp(cursor_y, 0, song_grid_h - 1);
+                breakend = true;
+            }
+        }
+        // Moving
+        else
+        {
+            cursor_y += godown - goup;
+        }
+
+        // Draw UI
+        DrawOptionsUI();
+    }
+
     // Handle input for the song menu
     if (state == m_song && !breakend)
     {
@@ -2322,6 +2376,16 @@ void EditorControl()
                         cursor_y = SDL_clamp(cursor_y, 0, chain_grid_h - 1);
                         breakend = true;
                     }
+                }
+
+                // Go to the page above
+                if (goup)
+                {
+                    // Options
+                    state = m_options;
+                    cursor_x = 0;
+                    cursor_y = SDL_clamp(cursor_y, 0, global_settings->setting_labels.size() - 1);
+                    breakend = true;
                 }
             }
             // Moving

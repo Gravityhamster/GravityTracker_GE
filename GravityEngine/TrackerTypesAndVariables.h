@@ -119,6 +119,7 @@ public:
     enum setting_type
     {
         fourbithex,
+        number,
         button
     };
 
@@ -132,8 +133,8 @@ public:
         // BPM
         setting_labels.push_back("BPM");
         setting_pointers.push_back(&bpm);
-        setting_ranges.push_back({ 40, 295 });
-        setting_types.push_back(fourbithex);
+        setting_ranges.push_back({ 40, 300 });
+        setting_types.push_back(number);
 
         // Save
         setting_labels.push_back("SAVE");

@@ -905,7 +905,8 @@ std::string IntToHexString(int i)
 }
 
 // Draw Options Editor UI
-void DrawOptionsUI()
+// int position : cursor position
+void DrawOptionsUI(int position)
 {
     // Menu title
     geptr->DrawTextString(0, 1, geptr->entity, "OPTIONS", primary_text_a);
@@ -915,7 +916,8 @@ void DrawOptionsUI()
     for (int i = 0; i < options_count; i++)
     {
         // Draw the setting
-        geptr->DrawTextString(0, 3 + i, geptr->entity, global_settings->setting_labels[i], primary_text_a);
+        geptr->DrawTextString(0, 3 + i, geptr->entity, global_settings->setting_labels[i], 
+            i == position && global_settings->setting_types[i] == settings::button ? primary_text_b : primary_text_a);
         // Draw the value
         if (global_settings->setting_types[i] == settings::fourbithex)
         {
@@ -923,7 +925,14 @@ void DrawOptionsUI()
             geptr->DrawSetColor(4, 3 + i, geptr->entity, primary_text_a);
             auto outstr = IntToHexString(*global_settings->setting_pointers[i]);
             outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
-            geptr->DrawTextString(6, 3 + i, geptr->entity, outstr, primary_text_a);
+            geptr->DrawTextString(6, 3 + i, geptr->entity, outstr, primary_text_a); // TODO: Implement proper colorization for hex editing
+        }
+        else if (global_settings->setting_types[i] == settings::number)
+        {
+            geptr->DrawChar(4, 3 + i, geptr->entity, ':');
+            geptr->DrawSetColor(4, 3 + i, geptr->entity, primary_text_a);
+            auto outstr = std::to_string(*global_settings->setting_pointers[i]);
+            geptr->DrawTextString(6, 3 + i, geptr->entity, outstr, i == position ? primary_text_b : primary_text_a);
         }
     }
 }
@@ -2209,9 +2218,70 @@ void EditorControl()
     // Handle input for the settings menu
     if (state == m_options && !breakend)
     {
+        int position = cursor_y;
         // Handle edits
-        if (inp->is_a_down())
+        if (inp->is_a_down() && (goup || godown || goleft || goright))
         {
+            // Handle the different types
+            switch (global_settings->setting_types[position])
+            {
+                case settings::number:
+                    
+                    // Read
+                    auto temp = global_settings->setting_pointers[position]->load();
+
+                    // Apply edits
+                    int amt;
+                    if (goup)
+                        amt = 10;
+                    if (godown)
+                        amt = -10;
+                    if (goright)
+                        amt = 1;
+                    if (goleft)
+                        amt = -1;
+
+                    // Apply range
+                    auto min = std::get<0>(global_settings->setting_ranges[position]);
+                    auto max = std::get<1>(global_settings->setting_ranges[position]);
+
+                    // Handle edge cases
+                    if (temp == max && amt > 0)
+                        temp = min;
+                    else if (temp == min && amt < 0)
+                        temp = max;
+                    else
+                    {
+                        // Apply amt
+                        temp += amt;
+                        // Wrap the cell between min and max
+                        if (temp < min)
+                            temp = max + (temp - min);
+                        if (temp > max)
+                            temp = min + (temp)-max;
+                    }
+
+                    // -- Special handlers --
+
+                    // BPM
+                    if (global_settings->setting_labels[position] == "BPM")
+                    {
+                        // Set default bpm to the new bpm
+                        set_bpm = temp;
+                        // Set the bpm
+                        ChangeBPM(temp);
+                    }
+
+                    // -- Default handler
+
+                    else
+                    {
+                        // Write
+                        global_settings->setting_pointers[position]->store(temp);
+                    }
+
+                    break;
+            }
         }
         // Handle navigation
         else if (inp->is_select_down())
@@ -2232,8 +2302,14 @@ void EditorControl()
             cursor_y += godown - goup;
         }
 
+        // Wrap cursor
+        if (cursor_y > ((int)(global_settings->setting_labels.size()) - 1))
+            cursor_y = 0;
+        if (cursor_y < 0)
+            cursor_y = ((int)(global_settings->setting_labels.size()) - 1);
+
         // Draw UI
-        DrawOptionsUI();
+        DrawOptionsUI(position);
     }
 
     // Handle input for the song menu

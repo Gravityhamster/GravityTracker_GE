@@ -177,3 +177,10 @@ void StopAllChannels();
 
 // Handle movement
 void EditorControl();
+
+// Get song save string
+std::string GetSongSaveString();
+
+// Do save process
+// std::string file_name : Name of the save file
+void DoSave(std::string file_name);

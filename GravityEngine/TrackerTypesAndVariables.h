@@ -128,6 +128,13 @@ public:
     std::vector<std::tuple<int, int>> setting_ranges;
     std::vector<setting_type> setting_types;
 
+private:
+    void LoadFromSaveString(std::string s)
+    {
+        // TODO : Load a string
+    }
+
+public:
     settings()
     {
         // BPM
@@ -149,7 +156,31 @@ public:
         setting_types.push_back(button);
     }
 
+    // Load from save string constructor
+    settings(std::string s) : settings()
+    {
+        LoadFromSaveString(s);
+    }
+
     ~settings() {}
+
+    std::string GetSettingsSaveString()
+    {
+        std::string s = "-=SETTINGS=-\n";
+
+        // Loop through settings and write them
+        int i = 0;
+        for (auto l : setting_labels)
+        {
+            if (setting_pointers[i] != nullptr)
+                s += l + " : " + std::to_string(setting_pointers[i]->load()) + "\n";
+            i++;
+        }
+
+        s += ";\n";
+
+        return s;
+    }
 };
 
 extern settings* global_settings;
@@ -172,6 +203,29 @@ public:
             arr_transpose[x] = 0x0000;
     };
 
+    // Create chain from save string
+    chain(std::string save_string)
+    {
+        // TODO : Implement load from a save_string
+    }
+
+    // Create save string for chain
+    std::string SaveString()
+    {
+        // Build arr 
+        std::string s = "arr{";
+        for (int a : arr)
+            s += std::to_string(a) + ",";
+        s += "},";
+        // Build arr transpose
+        s += "arr_transpose{";
+        for (int a : arr_transpose)
+            s += std::to_string(a) + ",";
+        s += "}_";
+
+        return s;
+    }
+
     // Destruct chain
     ~chain() {};
 };
@@ -192,6 +246,32 @@ public:
             for (int x = 0; x < len_x; x++)
                 arr[y][x] = x == 0 ? -9999 : -1;
     };
+
+    // Create phrase from save string
+    phrase(std::string save_string)
+    {
+        // TODO : Implement load from a save_string
+    }
+
+    // Create save string for phrase
+    std::string SaveString()
+    {
+        // Build arr 
+        std::string s = "";
+        for (int y = 0; y < len_y; y++)
+        {
+            s += "arr[" + std::to_string(y) + "]{";
+            for (int x = 0; x < len_x; x++)
+            {
+                s += std::to_string(arr[y][x]) + ",";
+            }
+            s += "},";
+        }
+
+        s += "_";
+
+        return s;
+    }
 
     // Destruct phrase
     ~phrase() {};

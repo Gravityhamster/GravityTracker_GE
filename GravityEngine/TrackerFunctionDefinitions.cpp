@@ -2296,6 +2296,15 @@ void EditorControl()
                 breakend = true;
             }
         }
+        // Handle buttons
+        else if (inp->is_a_pressed())
+        {
+            if (global_settings->setting_labels[position] == "SAVE")
+            {
+                // Do save process
+                DoSave("testfile");
+            }
+        }
         // Moving
         else
         {
@@ -4113,4 +4122,107 @@ void EditorControl()
         // Pause song
         pause_song = willpause;
     }
+}
+
+// Get song save string
+std::string GetSongSaveString()
+{
+    std::string song_string = "-=SONG=-\n";
+
+    int h = rowcount;
+    int w = channelcount;
+
+    // Get all cell values
+    for (int i = 0; i < h; i++)
+    {
+        for (int j = 0; j < w; j++)
+        {
+            // Get cell value
+            auto cell = songgrid[i][j];
+
+            // Record cell if not -1
+            if (cell != -1)
+            {
+                song_string += "y" + std::to_string(i) + "x" + std::to_string(j) + " : " + std::to_string(cell) + "_\n";
+            }
+        }
+    }
+
+    // Write the end value
+    song_string += ";\n";
+
+    return song_string;
+}
+
+// Get chain save string
+std::string GetChainSaveString()
+{
+    std::string chain_string = "-=CHAINS=-\n";
+
+    // Build chain list string
+    int i = 0;
+    for (auto c : chainlist)
+    {
+        if (c == nullptr)
+        {
+            i++;
+            continue;
+        }
+        // Build file entry
+        chain_string += "y" + std::to_string(i) + " : " + c->SaveString() + "\n";
+        i++;
+    }
+
+    // Write the end value
+    chain_string += ";\n";
+
+    return chain_string;
+}
+
+// Get phrase save string
+std::string GetPhraseSaveString()
+{
+    std::string phrase_string = "-=PHRASE=-\n";
+
+    // Build chain list string
+    int i = 0;
+    for (auto p : phraselist)
+    {
+        if (p == nullptr)
+        {
+            i++;
+            continue;
+        }
+        // Build file entry
+        phrase_string += "y" + std::to_string(i) + " : " + p->SaveString() + "\n";
+        i++;
+    }
+
+    // Write the end value
+    phrase_string += ";\n";
+
+    return phrase_string;
+}
+
+// Do save process
+// std::string file_name : Name of the save file
+void DoSave(std::string file_name)
+{
+    std::string save_file;
+
+    // Settings string
+    save_file += global_settings->GetSettingsSaveString();
+    // Song grid
+    save_file += GetSongSaveString();
+    // Chain list
+    save_file += GetChainSaveString();
+    // Phrase list
+    save_file += GetPhraseSaveString();
+    // TODO : Instrument list
+    // TODO : Sample list
+    // TODO : Table list
+
+    // Write end to the save file
+    save_file += "\n[END]";
+
 }

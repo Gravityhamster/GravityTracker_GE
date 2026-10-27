@@ -4182,7 +4182,7 @@ std::string GetChainSaveString()
 // Get phrase save string
 std::string GetPhraseSaveString()
 {
-    std::string phrase_string = "-=PHRASE=-\n";
+    std::string phrase_string = "-=PHRASES=-\n";
 
     // Build chain list string
     int i = 0;
@@ -4204,6 +4204,56 @@ std::string GetPhraseSaveString()
     return phrase_string;
 }
 
+// Get instrument save string
+std::string GetInstrumentSaveString()
+{
+    std::string instrument_string = "-=INSTRUMENTS=-\n";
+
+    // Build chain list string
+    int i = 0;
+    for (auto n : instrumentlist)
+    {
+        if (n == nullptr)
+        {
+            i++;
+            continue;
+        }
+        // Build file entry
+        instrument_string += "y" + std::to_string(i) + " : " + n->SaveString() + "\n";
+        i++;
+    }
+
+    // Write the end value
+    instrument_string += ";\n";
+
+    return instrument_string;
+}
+
+// Get sample save string
+std::string GetSampleSaveString()
+{
+    std::string sample_string = "-=SAMPLES=-\n";
+
+    // Build chain list string
+    int i = 0;
+    for (auto s : samplelist)
+    {
+        if (s == nullptr)
+        {
+            i++;
+            continue;
+        }
+        // Build file entry
+        sample_string += "y" + std::to_string(i) + " : " + s->SaveString() + "\n";
+        i++;
+    }
+
+    // Write the end value
+    sample_string += ";\n";
+
+    return sample_string;
+}
+
 // Do save process
 // std::string file_name : Name of the save file
 void DoSave(std::string file_name)
@@ -4218,8 +4268,10 @@ void DoSave(std::string file_name)
     save_file += GetChainSaveString();
     // Phrase list
     save_file += GetPhraseSaveString();
-    // TODO : Instrument list
-    // TODO : Sample list
+    // Instrument list
+    save_file += GetInstrumentSaveString();
+    // Sample list
+    save_file += GetSampleSaveString();
     // TODO : Table list
 
     // Write end to the save file

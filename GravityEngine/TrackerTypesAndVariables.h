@@ -1,6 +1,7 @@
 #pragma once
 #include "GravityEngineSDL.h"
 #include "TrackerFunctionSignatures.h"
+#include "base64/base64.h"
 
 // Reference for the core of the Gravity Engine
 extern GravityEngine_Core* geptr;
@@ -281,8 +282,19 @@ public:
 class sample
 {
 public:
-    std::string path;
+    std::string path = "";
     int sound_index = -1;
+
+    // Create save string for sample
+    std::string SaveString()
+    {
+        std::string s = "";
+
+        s += "path=" + path + ",";
+        s += "index=" + std::to_string(sound_index) + ";";
+        
+        return s;
+    }
 };
 
 // Instruments - Note audio definitions
@@ -373,6 +385,44 @@ public:
 
         // Return copy
         return i;
+    }
+
+    // Create save string
+    std::string SaveString()
+    {
+        std::string s = "";
+
+        // Build the save string
+        s += "type=" + std::to_string((int)type) + ",";
+        s += "detune_edit=" + std::to_string(detune_edit) + ",";
+        s += "detune=" + std::to_string(detune) + ",";
+        s += "volume_edit=" + std::to_string(volume_edit) + ",";
+        s += "volume=" + std::to_string(volume) + ",";
+        s += "volume_freq=" + std::to_string(volume_freq) + ",";
+        s += "pan_edit=" + std::to_string(pan_edit) + ",";
+        s += "panning=" + std::to_string(panning) + ",";
+        s += "pan_freq=" + std::to_string(pan_freq) + ",";
+        s += "pitch_freq_edit=" + std::to_string(pitch_freq_edit) + ",";
+        s += "pitch_freq=" + std::to_string(pitch_freq) + ",";
+        s += "cutoff_edit=" + std::to_string(cutoff_edit) + ",";
+        s += "cutoff=" + std::to_string(cutoff) + ",";
+        s += "cutoff_freq=" + std::to_string(cutoff_freq) + ",";
+        s += "resonance_edit=" + std::to_string(resonance_edit) + ",";
+        s += "resonance=" + std::to_string(resonance) + ",";
+        s += "resonance_freq=" + std::to_string(resonance_freq) + ",";
+        s += "waveform=" + std::to_string((int)waveform) + ",";
+        s += "filter=" + std::to_string((int)filter) + ",";
+        s += "pw_edit=" + std::to_string(pw_edit) + ",";
+        s += "pulse_width=" + std::to_string(pulse_width) + ",";
+        s += "pulse_width_freq=" + std::to_string(pulse_width_freq) + ",";
+        s += "base_pitch=" + std::to_string(base_pitch) + ",";
+        s += "sample_index=" + std::to_string(sample_index) + ",";
+        s += "start_time_ms=" + std::to_string(start_time_ms) + ",";
+        s += "mid_time_ms=" + std::to_string(mid_time_ms) + ",";
+        s += "end_time_ms=" + std::to_string(end_time_ms) + ",";
+        s += "loop=" + std::to_string(loop) + ";";
+
+        return s;
     }
 };
 

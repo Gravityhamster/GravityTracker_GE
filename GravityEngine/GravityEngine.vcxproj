@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="base64\base64.h" />
     <ClInclude Include="GravityEngineSDL.h" />
     <ClInclude Include="GravityEngineTypes.h" />
     <ClInclude Include="GravitySamplerSDL.h" />
@@ -27,6 +28,7 @@
     <ClInclude Include="SPSC_Queue.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="base64\base64.cpp" />
     <ClCompile Include="Gravitytracker.cpp" />
     <ClCompile Include="TrackerTypesAndVariables.h" />
     <ClCompile Include="TrackerFunctionDefinitions.cpp" />

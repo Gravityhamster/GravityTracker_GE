@@ -183,4 +183,4 @@ std::string GetSongSaveString();
 
 // Do save process
 // std::string file_name : Name of the save file
-void DoSave(std::string file_name);
+bool DoSave(std::string file_name);

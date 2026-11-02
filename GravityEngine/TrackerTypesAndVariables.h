@@ -469,6 +469,26 @@ public:
         // Return copy
         return t;
     }
+
+    // Create save string for table
+    std::string SaveString()
+    {
+        // Build arr 
+        std::string s = "";
+        for (int y = 0; y < len_y; y++)
+        {
+            s += "arr[" + std::to_string(y) + "]{";
+            for (int x = 0; x < len_x; x++)
+            {
+                s += std::to_string(arr[y][x]) + ",";
+            }
+            s += "},";
+        }
+
+        s += "_";
+
+        return s;
+    }
 };
 
 // List of chains and phrases

@@ -7,6 +7,9 @@
 #include <cstdio>
 #include <filesystem>
 #include <system_error>
+#include <iostream>
+#include <fstream>
+#include <cstdio>
 #include "GravityTempo.h"
 
 // Find string f in s
@@ -821,26 +824,46 @@ void DoTick()
                 // Handle different depending on whether this is real-time or we are catching up to real-time.
                 if (ticknumber % std::max(1, tps) == 0)
                 {
+                    auto play_chain = songgrid[channellist[i].chain_ptr][i];
+                    int play_phrase = -1;
+                    if (play_chain != -1)
+                        play_phrase = channellist[i].playing_phrase == -1 ? chainlist[play_chain]->arr[channellist[i].phrase_ptr] : channellist[i].playing_phrase.load();
                     // Phrase before FX
-                    auto fx1 = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][2];
-                    auto fx1_p = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][3];
-                    auto fx2 = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][4];
-                    auto fx2_p = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][5];
-                    auto fx3 = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][6];
-                    auto fx3_p = phraselist[channellist[i].playing_phrase]->arr[channellist[i].step_ptr][7];
-                    GetFX(i, channellist[i].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, before);
+                    if (play_phrase != -1)
+                    {
+                        auto fx1 = phraselist[play_phrase]->arr[channellist[i].step_ptr][2];
+                        auto fx1_p = phraselist[play_phrase]->arr[channellist[i].step_ptr][3];
+                        auto fx2 = phraselist[play_phrase]->arr[channellist[i].step_ptr][4];
+                        auto fx2_p = phraselist[play_phrase]->arr[channellist[i].step_ptr][5];
+                        auto fx3 = phraselist[play_phrase]->arr[channellist[i].step_ptr][6];
+                        auto fx3_p = phraselist[play_phrase]->arr[channellist[i].step_ptr][7];
+                        GetFX(i, channellist[i].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, before);
+                    }
                 }
 
                 // Table before FX
-                if (channellist[i].playing_table != -1)
+                auto play_chain = songgrid[channellist[i].chain_ptr][i];
+                int play_phrase = -1;
+                if (play_chain != -1)
+                    play_phrase = chainlist[play_chain]->arr[channellist[i].phrase_ptr];
+                if (play_phrase != -1)
                 {
-                    auto fx1 = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][1];
-                    auto fx1_p = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][2];
-                    auto fx2 = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][3];
-                    auto fx2_p = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][4];
-                    auto fx3 = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][5];
-                    auto fx3_p = tablelist[channellist[i].playing_table]->arr[channellist[i].tick_ptr][6];
-                    GetFX(i, channellist[i].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, before);
+                    auto inst = GetAt(&instrumentlist, phraselist[play_phrase]->arr[channellist[i].step_ptr][1]);
+                    int play_table;
+                    if (inst == nullptr)
+                        play_table = -1;
+                    else
+                        play_table = channellist[i].playing_table == -1 ? inst->table_index : channellist[i].playing_table.load();
+                    if (play_table != -1)
+                    {
+                        auto fx1 = tablelist[play_table]->arr[channellist[i].tick_ptr][1];
+                        auto fx1_p = tablelist[play_table]->arr[channellist[i].tick_ptr][2];
+                        auto fx2 = tablelist[play_table]->arr[channellist[i].tick_ptr][3];
+                        auto fx2_p = tablelist[play_table]->arr[channellist[i].tick_ptr][4];
+                        auto fx3 = tablelist[play_table]->arr[channellist[i].tick_ptr][5];
+                        auto fx3_p = tablelist[play_table]->arr[channellist[i].tick_ptr][6];
+                        GetFX(i, channellist[i].type, -9999, fx1, fx1_p, fx2, fx2_p, fx3, fx3_p, before);
+                    }
                 }
             }
 
@@ -2302,7 +2325,7 @@ void EditorControl()
             if (global_settings->setting_labels[position] == "SAVE")
             {
                 // Do save process
-                DoSave("testfile");
+                DoSave("testfile.txt");
             }
         }
         // Moving
@@ -2528,7 +2551,7 @@ void EditorControl()
                 channellist[playing_channel].chain_ptr = open_chain_index;
                 channellist[playing_channel].playing_chain = open_chain;
                 channellist[playing_channel].phrase_ptr = cursor_y + chain_offset_y;
-                channellist[playing_channel].playing_phrase = -1;
+                channellist[playing_channel].playing_phrase = chainlist[open_chain]->arr[cursor_y + chain_offset_y];
                 channellist[playing_channel].step_ptr = 0;
                 channellist[playing_channel].tick_ptr = 0;
                 channellist[playing_channel].delay_ticks = 0;
@@ -4254,27 +4277,94 @@ std::string GetSampleSaveString()
     return sample_string;
 }
 
+// Append to text file
+// std::string file_name : Name of the save file
+bool append(std::string file_name, std::string text)
+{
+    // Init the file
+    std::ofstream file(file_name, std::ios::app);
+
+    // Check if the file is open
+    if (file.is_open())
+    {
+        file << text;
+        file.close();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+// Get phrase save string
+std::string GetTableSaveString()
+{
+    std::string table_string = "-=TABLE=-\n";
+
+    // Build chain list string
+    int i = 0;
+    for (auto t : tablelist)
+    {
+        if (t == nullptr)
+        {
+            i++;
+            continue;
+        }
+        // Build file entry
+        table_string += "y" + std::to_string(i) + " : " + t->SaveString() + "\n";
+        i++;
+    }
+
+    // Write the end value
+    table_string += ";\n";
+
+    return table_string;
+}
+
+// Check if file exists
+// std::string file_name : Name of the save file
+bool FileExists(std::string file_name)
+{
+    std::ifstream file(file_name);
+    return file.good();
+}
+
 // Do save process
 // std::string file_name : Name of the save file
-void DoSave(std::string file_name)
+bool DoSave(std::string file_name)
 {
     std::string save_file;
 
+    if (FileExists(file_name))
+        if (std::remove(file_name.c_str()) != 0)
+            return false;
+
     // Settings string
-    save_file += global_settings->GetSettingsSaveString();
+    save_file = global_settings->GetSettingsSaveString();
+    append(file_name, save_file);
     // Song grid
-    save_file += GetSongSaveString();
+    save_file = GetSongSaveString();
+    append(file_name, save_file);
     // Chain list
-    save_file += GetChainSaveString();
+    save_file = GetChainSaveString();
+    append(file_name, save_file);
     // Phrase list
-    save_file += GetPhraseSaveString();
+    save_file = GetPhraseSaveString();
+    append(file_name, save_file);
     // Instrument list
-    save_file += GetInstrumentSaveString();
+    save_file = GetInstrumentSaveString();
+    append(file_name, save_file);
     // Sample list
-    save_file += GetSampleSaveString();
-    // TODO : Table list
+    save_file = GetSampleSaveString();
+    append(file_name, save_file);
+    // Table list
+    save_file = GetTableSaveString();
+    append(file_name, save_file);
 
     // Write end to the save file
-    save_file += "\n[END]";
+    save_file = "\n[END]";
+    append(file_name, save_file);
 
+    return true;
 }

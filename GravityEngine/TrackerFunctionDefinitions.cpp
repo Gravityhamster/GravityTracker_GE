@@ -2325,7 +2325,7 @@ void EditorControl()
             if (global_settings->setting_labels[position] == "SAVE")
             {
                 // Do save process
-                DoSave("testfile.txt");
+                DoSave(save_folder + "\\" + file_name + ".txt");
             }
         }
         // Moving

@@ -102,6 +102,8 @@ extern float instrument_edit_digit_count; // Flag for how many digits to expect 
 extern int instrument_edit_y; // Flag for which row to edit in the instr editor
 extern int file_display_count; // How many files to display in the file browser
 extern int current_dir_length; // Track the length of the current directory string for file browser
+extern std::string save_folder; // Directory for project files
+extern std::string file_name; // Name of the project file
 extern std::string main_dir; // Main directory for file browser
 extern std::string current_dir; // Current directory for file browser
 extern std::string selected_path; // Path of the selected file or directory
@@ -738,6 +740,16 @@ private:
     }
 };
 
+// Tracker colors --
+extern color primary_text_a;
+extern color header_text_a;
+extern color primary_text_b;
+extern color header_text_b;
+extern color body_text_a;
+extern color body_text_b;
+
+// Miscellaneous objects --
+
 // Object to handle all inputs
 class input : public virtual GravityEngine_Object
 {
@@ -898,15 +910,140 @@ public:
     bool is_shift_released() { return was_shift && !is_shift; }
 };
 
+// Keyboard
+class keyboard
+{
+private:
+    std::string keyboard_string = "a1234567890a\naQWERTYUIOPa\naASDFGHJKLZa\naXCVBNM  <>a\n";
+    std::string input_string = "          ";
+    int k_cursor_x = 0;
+    int k_cursor_y = 0;
+    int i_loc = 0;
+    bool active = false;
+
+    void complete()
+    {
+        k_cursor_x = 0;
+        k_cursor_y = 0;
+        i_loc = 0;
+        active = false;
+    }
+
+public:
+
+    void listen()
+    {
+        active = true;
+        input_string = "          ";
+    }
+
+    bool getStatus()
+    {
+        return active;
+    }
+
+    std::string getInput()
+    {
+        auto s = input_string;
+        
+        // Trim left
+        while (s.size() > 0 && s[0] == ' ')
+        {
+            if (s[0] == ' ')
+                s.erase(s.begin(), s.begin() + 1);
+        }
+
+        // Trim right
+        while (s.size() > 0 && s[s.size()-1] == ' ')
+        {
+            if (s[s.size()-1] == ' ')
+                s.erase(s.begin() + s.size() - 1);
+        }
+
+        return s;
+    }
+
+    void drawKeyboard()
+    {
+        // Look the input object up once per call instead of once per check
+        auto* inp = dynamic_cast<input*>(geptr->GetObjectReference(inputgetter));
+
+        // Build keyboard
+        std::string draw_string = "aaaaaaaaaaaa\n";
+        draw_string += "a";
+        std::string instr = input_string;
+        draw_string += instr;
+        draw_string += "a\n";
+        draw_string += "aaaaaaaaaaaa\n";
+        draw_string += keyboard_string;
+        draw_string += "aaaaaaaaaaaa\n";
+        
+        // 12x8
+        int sw = geptr->GetCanvasW() / 2;
+        int sh = geptr->GetCanvasH() / 2;
+        int dx = sw - 6;
+        int dy = sh - 4;
+
+        // Draw editor fields
+        geptr->DrawTextString(dx, dy, geptr->entity, draw_string, primary_text_a);
+
+        // Handle keyboard input
+        k_cursor_x += inp->is_right_pressed() - inp->is_left_pressed();
+        k_cursor_y += inp->is_down_pressed() - inp->is_up_pressed();
+        k_cursor_x = k_cursor_x % 10;
+        k_cursor_y = k_cursor_y % 4;
+        if (k_cursor_x < 0) k_cursor_x = 9;
+        if (k_cursor_y < 0) k_cursor_y = 3;
+
+        if (inp->is_a_pressed())
+        {
+            if (geptr->GetChar(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity) == '<')
+            {
+                if (i_loc > 0)
+                    i_loc--;
+            }
+            else if (geptr->GetChar(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity) == '>')
+            {
+                if (i_loc < 9)
+                    i_loc++;
+            }
+            else
+            {
+                input_string[i_loc] = geptr->GetChar(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity);
+                if (i_loc < 9)
+                    i_loc++;
+            }
+        }
+
+        // Draw highlights
+
+        // Highlights on input string
+        if (geptr->GetChar(dx + i_loc + 1, dy + 1, geptr->entity) == ' ')
+        {
+            geptr->DrawChar(dx + i_loc + 1, dy + 1, geptr->entity, '0');
+            geptr->DrawSetColor(dx + i_loc + 1, dy + 1, geptr->entity, { primary_text_b.b, primary_text_b.b });
+        }
+        else
+        {
+            geptr->DrawSetColor(dx + i_loc + 1, dy + 1, geptr->entity, primary_text_b);
+        }
+
+        // Highlights on keyboard
+        if (geptr->GetChar(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity) == ' ')
+        {
+            geptr->DrawChar(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity, '0');
+            geptr->DrawSetColor(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity, { primary_text_b.b, primary_text_b.b });
+        }
+        else
+        {
+            geptr->DrawSetColor(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity, primary_text_b);
+        }
+    }
+};
+
+extern keyboard* trckrkb;
+
 // Data structures --
 extern GravityEngine_Synth* audiosynth;
 extern GravityEngine_Sampler* audiosampler;
 extern channelsequencer channellist[channelcount];
-
-// Tracker colors --
-extern color primary_text_a;
-extern color header_text_a;
-extern color primary_text_b;
-extern color header_text_b;
-extern color body_text_a;
-extern color body_text_b;

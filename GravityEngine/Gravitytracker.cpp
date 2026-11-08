@@ -62,6 +62,8 @@ float instrument_edit_digit_count = -1;
 int instrument_edit_y = -1;
 int file_display_count = 10;
 int current_dir_length = 0;
+std::string save_folder = ".\\Saves";
+std::string file_name = "";
 std::string main_dir = ".\\SampleLibrary\\";
 std::string current_dir = main_dir;
 std::string selected_path = "";
@@ -71,6 +73,7 @@ menu state = m_song;
 int inputgetter;
 int** songgrid;
 settings* global_settings;
+keyboard* trckrkb = new keyboard();
 
 // Data structures
 std::vector<instrument*> instrumentlist;
@@ -157,6 +160,10 @@ void PreGameLoop()
         std::to_string(channellist[0].step_ptr) + " - " +
         std::to_string(channellist[0].tick_ptr) + "     " + std::to_string(bpm.load()),
         primary_text_a);
+    
+    // Draw the keyboard if necessary
+    if (trckrkb->getStatus())
+        trckrkb->drawKeyboard();
 }
 
 // Master post code
@@ -176,7 +183,7 @@ int main()
     // Init engine - 128x72 is generally the largest you can get and still maintain good performance
     auto cw = 96 / 2 + 1;
     auto ch = 54 / 2;
-    GravityEngine_Core ge_inst = GravityEngine_Core("Game", "com.example.game", "1.0", std::max(cw, 37), std::max(ch, 28), fps, 1920/2, 1080/2, "./GameFont.ttf", 2);
+    GravityEngine_Core ge_inst = GravityEngine_Core("Game", "com.example.game", "1.0", std::max(cw, 37), std::max(ch, 28), fps, 1920, 1080, "./GameFont.ttf", 2);
 
     ge_inst.debug_mode = true; // Show debug overlay
     ge_inst.debug_complex = false; // Show all information
@@ -197,6 +204,7 @@ int main()
     for (auto o : tablelist)
         delete o;
     delete global_settings;
+    delete trckrkb;
     running = false;
 
     // Report success to host

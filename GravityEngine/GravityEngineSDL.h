@@ -231,7 +231,7 @@ private:
     const char* game_version; // The version of the game
     int scr_w; // W of screen
     int scr_h; // H of screen
-    int SDL_window_props = SDL_WINDOW_ALWAYS_ON_TOP; //0;
+    int SDL_window_props = SDL_WINDOW_FULLSCREEN; // SDL_WINDOW_ALWAYS_ON_TOP; //0;
     bool screen_updated = false; // The flag that tells the game if it should update the screen or not
     std::string font_path; // Location of the font to use for the text on screen
     SDL_Window* window = NULL; // Pointer to the SDL window object
@@ -803,12 +803,17 @@ public:
             int q = 0;
             for (auto c : s)
             {
-                if (q + x < canvas_w)
+                if (c == '\n')
+                {
+                    y++;
+                    q = 0;
+                }
+                else if (q + x < canvas_w)
                 {
                     canvas_bg[y][q + x] = c;
                     color_bg[y][q + x] = col;
+                    q++;
                 }
-                q++;
             }
         }
         // Draw text to the foreground layer
@@ -818,12 +823,17 @@ public:
             int q = 0;
             for (auto c : s)
             {
-                if (q + x < canvas_w)
+                if (c == '\n')
+                {
+                    y++;
+                    q = 0;
+                }
+                else if (q + x < canvas_w)
                 {
                     canvas_fg[y][q + x] = c;
                     color_fg[y][q + x] = col;
+                    q++;
                 }
-                q++;
             }
         }
         // Draw text to the ui layer
@@ -833,12 +843,17 @@ public:
             int q = 0;
             for (auto c : s)
             {
-                if (q + x < canvas_w)
+                if (c == '\n')
+                {
+                    y++;
+                    q = 0;
+                }
+                else if (q + x < canvas_w)
                 {
                     canvas_ui[y][q + x] = c;
                     color_ui[y][q + x] = col;
+                    q++;
                 }
-                q++;
             }
         }
         // Draw text to the entity layer
@@ -848,12 +863,17 @@ public:
             int q = 0;
             for (auto c : s)
             {
-                if (q + x < canvas_w)
+                if (c == '\n')
+                {
+                    y++;
+                    q = 0;
+                }
+                else if (q + x < canvas_w)
                 {
                     canvas_ent[y][q + x] = c;
                     color_ent[y][q + x] = col;
+                    q++;
                 }
-                q++;
             }
         }
         // Draw text to the debug layer
@@ -863,12 +883,17 @@ public:
             int q = 0;
             for (auto c : s)
             {
-                if (q + x < canvas_w)
+                if (c == '\n')
+                {
+                    y++;
+                    q = 0;
+                }
+                else if (q + x < canvas_w)
                 {
                     canvas_debug[y][q + x] = c;
                     color_debug[y][q + x] = col;
+                    q++;
                 }
-                q++;
             }
         }
     }

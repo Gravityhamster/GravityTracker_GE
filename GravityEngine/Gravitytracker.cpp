@@ -74,6 +74,7 @@ int inputgetter;
 int** songgrid;
 settings* global_settings;
 keyboard* trckrkb = new keyboard();
+bool waiting_for_save = false;
 
 // Data structures
 std::vector<instrument*> instrumentlist;
@@ -153,7 +154,7 @@ void PreGameLoop()
     // Get input and apply to the editor as appropriate
     EditorControl();
 
-    // Debug : Draw channel 0's sequence
+    // Debug : Draw channel 0's sequence -- TODO: Changs this to the open or hovered-on channel
     geptr->DrawTextString(10, 0, geptr->entity,
         std::to_string(channellist[0].chain_ptr) + " - " +
         std::to_string(channellist[0].phrase_ptr) + " - " +

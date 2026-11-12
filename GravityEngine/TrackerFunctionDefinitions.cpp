@@ -2194,6 +2194,7 @@ void EditorControl()
 {
     // Look the input object up once per call instead of once per check
     auto* inp = dynamic_cast<input*>(geptr->GetObjectReference(inputgetter));
+    inp->input_paused = trckrkb->getStatus();
     // Set checker variables
     bool breakend = false;
     int goright = 0;
@@ -2324,8 +2325,8 @@ void EditorControl()
         {
             if (global_settings->setting_labels[position] == "SAVE")
             {
-                // Do save process
-                DoSave(save_folder + "\\" + file_name + ".txt");
+				waiting_for_save = true;
+				trckrkb->listen(file_name);
             }
         }
         // Moving
@@ -2333,6 +2334,19 @@ void EditorControl()
         {
             cursor_y += godown - goup;
         }
+
+        // Do save process?
+		if (waiting_for_save == true && trckrkb->getStatus() == false)
+		{
+			file_name = trckrkb->getInput();
+            // Create song save folder if it does not exist
+            std::error_code ec;
+            if (!std::filesystem::exists(save_folder, ec))
+                std::filesystem::create_directory(save_folder, ec);
+			// Save the project
+            DoSave(save_folder + "\\" + file_name + ".txt");
+			waiting_for_save = false;
+		}
 
         // Wrap cursor
         if (cursor_y > ((int)(global_settings->setting_labels.size()) - 1))
@@ -4300,7 +4314,7 @@ bool append(std::string file_name, std::string text)
 // Get phrase save string
 std::string GetTableSaveString()
 {
-    std::string table_string = "-=TABLE=-\n";
+    std::string table_string = "-=TABLES=-\n";
 
     // Build chain list string
     int i = 0;

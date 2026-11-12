@@ -1,0 +1,17 @@
+-=SETTINGS=-
+BPM : 125
+;
+-=SONG=-
+;
+-=CHAINS=-
+;
+-=PHRASES=-
+;
+-=INSTRUMENTS=-
+;
+-=SAMPLES=-
+;
+-=TABLE=-
+;
+
+[END]

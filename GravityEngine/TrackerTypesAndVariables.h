@@ -112,6 +112,7 @@ extern bool alt_mode; // Alt mode is a special mode that allows for more advance
 extern menu state; // What menu are we in
 extern int inputgetter; // Input getter
 extern int** songgrid; //[0xffff][64];
+extern bool waiting_for_save; // Flag for if we are waiting for the keyboard to return our name so we can save
 
 // Tracker object concepts --
 
@@ -821,6 +822,8 @@ private:
     bool is_shift = false; // Button is pressed this frame
 
 public:
+    bool input_paused = false;
+
     input() {};
     ~input() {};
     void begin_step()
@@ -873,41 +876,41 @@ public:
     void step() {};
     void end_step() {};
 
-    bool is_up_pressed() { return is_up && !was_up; }
-    bool is_up_down() { return is_up; }
-    bool is_up_released() { return was_up && !is_up; }
+    bool is_up_pressed() { return is_up && !was_up && !input_paused; }
+    bool is_up_down() { return is_up && !input_paused; }
+    bool is_up_released() { return was_up && !is_up && !input_paused; }
 
-    bool is_down_pressed() { return is_down && !was_down; }
-    bool is_down_down() { return is_down; }
-    bool is_down_released() { return was_down && !is_down; }
+    bool is_down_pressed() { return is_down && !was_down && !input_paused; }
+    bool is_down_down() { return is_down && !input_paused; }
+    bool is_down_released() { return was_down && !is_down && !input_paused; }
 
-    bool is_left_pressed() { return is_left && !was_left; }
-    bool is_left_down() { return is_left; }
-    bool is_left_released() { return was_left && !is_left; }
+    bool is_left_pressed() { return is_left && !was_left && !input_paused; }
+    bool is_left_down() { return is_left && !input_paused; }
+    bool is_left_released() { return was_left && !is_left && !input_paused; }
 
-    bool is_right_pressed() { return is_right && !was_right; }
-    bool is_right_down() { return is_right; }
-    bool is_right_released() { return was_right && !is_right; }
+    bool is_right_pressed() { return is_right && !was_right && !input_paused; }
+    bool is_right_down() { return is_right && !input_paused; }
+    bool is_right_released() { return was_right && !is_right && !input_paused; }
 
-    bool is_a_pressed() { return is_a && !was_a; }
-    bool is_a_down() { return is_a; }
-    bool is_a_released() { return was_a && !is_a; }
+    bool is_a_pressed() { return is_a && !was_a && !input_paused; }
+    bool is_a_down() { return is_a && !input_paused; }
+    bool is_a_released() { return was_a && !is_a && !input_paused; }
 
-    bool is_b_pressed() { return is_b && !was_b; }
-    bool is_b_down() { return is_b; }
-    bool is_b_released() { return was_b && !is_b; }
+    bool is_b_pressed() { return is_b && !was_b && !input_paused; }
+    bool is_b_down() { return is_b && !input_paused; }
+    bool is_b_released() { return was_b && !is_b && !input_paused; }
 
-    bool is_start_pressed() { return is_start && !was_start; }
-    bool is_start_down() { return is_start; }
-    bool is_start_released() { return was_start && !is_start; }
+    bool is_start_pressed() { return is_start && !was_start && !input_paused; }
+    bool is_start_down() { return is_start && !input_paused; }
+    bool is_start_released() { return was_start && !is_start && !input_paused; }
 
-    bool is_select_pressed() { return is_select && !was_select; }
-    bool is_select_down() { return is_select; }
-    bool is_select_released() { return was_select && !is_select; }
+    bool is_select_pressed() { return is_select && !was_select && !input_paused; }
+    bool is_select_down() { return is_select && !input_paused; }
+    bool is_select_released() { return was_select && !is_select && !input_paused; }
 
-    bool is_shift_pressed() { return is_shift && !was_shift; }
-    bool is_shift_down() { return is_shift; }
-    bool is_shift_released() { return was_shift && !is_shift; }
+    bool is_shift_pressed() { return is_shift && !was_shift && !input_paused; }
+    bool is_shift_down() { return is_shift && !input_paused; }
+    bool is_shift_released() { return was_shift && !is_shift && !input_paused; }
 };
 
 // Keyboard
@@ -920,21 +923,25 @@ private:
     int k_cursor_y = 0;
     int i_loc = 0;
     bool active = false;
+    bool first = true;
 
     void complete()
     {
-        k_cursor_x = 0;
-        k_cursor_y = 0;
-        i_loc = 0;
         active = false;
     }
 
 public:
 
-    void listen()
+    void listen(std::string preinput = "          ")
     {
         active = true;
-        input_string = "          ";
+        auto outstr = preinput;
+        outstr.insert(outstr.end(), 10 - outstr.size(), ' ');
+        input_string = outstr; // Format the input to be properly padded
+        k_cursor_x = 0;
+        k_cursor_y = 0;
+        i_loc = 0;
+        first = true;
     }
 
     bool getStatus()
@@ -965,8 +972,18 @@ public:
 
     void drawKeyboard()
     {
+		// Skip on first pass to avoid input being taken mistakenly. If A is used to open the keyboard, then it will immediately register as a keypress on the keyboard. This is a workaround for that issue.
+        if (first)
+        {
+            first = false;
+            return;
+        }
+
         // Look the input object up once per call instead of once per check
         auto* inp = dynamic_cast<input*>(geptr->GetObjectReference(inputgetter));
+        // Activate input based on status
+        auto old_input_paused = inp->input_paused;
+        inp->input_paused = !getStatus();
 
         // Build keyboard
         std::string draw_string = "aaaaaaaaaaaa\n";
@@ -995,6 +1012,7 @@ public:
         if (k_cursor_x < 0) k_cursor_x = 9;
         if (k_cursor_y < 0) k_cursor_y = 3;
 
+        // Hit key
         if (inp->is_a_pressed())
         {
             if (geptr->GetChar(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity) == '<')
@@ -1014,6 +1032,12 @@ public:
                     i_loc++;
             }
         }
+
+        // Accept input
+		if (inp->is_start_pressed())
+		{
+			complete();
+		}
 
         // Draw highlights
 
@@ -1038,6 +1062,9 @@ public:
         {
             geptr->DrawSetColor(dx + k_cursor_x + 1, dy + k_cursor_y + 3, geptr->entity, primary_text_b);
         }
+
+        // Reset pause input status
+        inp->input_paused = old_input_paused;
     }
 };
 

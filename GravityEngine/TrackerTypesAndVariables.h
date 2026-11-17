@@ -102,10 +102,12 @@ extern float instrument_edit_digit_count; // Flag for how many digits to expect 
 extern int instrument_edit_y; // Flag for which row to edit in the instr editor
 extern int file_display_count; // How many files to display in the file browser
 extern int current_dir_length; // Track the length of the current directory string for file browser
+extern int current_save_dir_length; // Track the length of the current directory string for file browser
 extern std::string save_folder; // Directory for project files
 extern std::string file_name; // Name of the project file
 extern std::string main_dir; // Main directory for file browser
 extern std::string current_dir; // Current directory for file browser
+extern std::string current_save_dir; // Current directory for save file browser
 extern std::string selected_path; // Path of the selected file or directory
 extern bool selected_path_isdir; // Flag for if the selected path is a directory or a file
 extern bool alt_mode; // Alt mode is a special mode that allows for more advanced editing features
@@ -131,6 +133,7 @@ public:
     std::vector<std::atomic<int>*> setting_pointers;
     std::vector<std::tuple<int, int>> setting_ranges;
     std::vector<setting_type> setting_types;
+    bool loading_menu = false;
 
 private:
     void LoadFromSaveString(std::string s)

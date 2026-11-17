@@ -2013,6 +2013,88 @@ void DrawWaveUI()
     }
 }
 
+// Draw File Load UI
+void DrawLoadUI()
+{
+    // Menu title and sample number
+    geptr->DrawTextString(0, 1, geptr->entity, "LOAD", primary_text_a);
+
+    // Draw current directory -
+
+    // -= Directory listing (cached) =-
+    // This used to scan the folder, sort it (with a stat() per comparison) and rebuild the strings
+    // on EVERY frame. Now it is rebuilt when the folder changes or once per second, and it uses the
+    // non-throwing filesystem overloads so a folder deleted behind our back can't crash the UI.
+    struct FileEntry { std::string path; std::string upper; bool is_dir; bool is_file; };
+    static std::vector<FileEntry> listing;
+    static std::string listing_dir;
+    static std::chrono::steady_clock::time_point listing_time;
+
+    const auto now = std::chrono::steady_clock::now();
+    if (listing_dir != current_save_dir || now - listing_time > std::chrono::seconds(1))
+    {
+        std::error_code ec;
+
+        // Create save directory if it does not exist
+        if (!std::filesystem::exists(current_save_dir, ec))
+            std::filesystem::create_directory(current_save_dir, ec);
+
+        listing.clear();
+        ec.clear();
+        for (std::filesystem::directory_iterator it(current_save_dir, ec), end; !ec && it != end; it.increment(ec))
+        {
+            std::error_code entry_ec;
+            FileEntry e;
+            e.path = it->path().string();
+            e.is_dir = it->is_directory(entry_ec);
+            e.is_file = it->is_regular_file(entry_ec);
+            e.upper = e.path;
+            for (auto& c : e.upper)
+                c = (char)toupper((unsigned char)c);
+            listing.push_back(std::move(e));
+        }
+
+        // Folders first, then alphabetical. (The old comparator wasn't a valid ordering for a
+        // folder compared against a file.)
+        std::sort(listing.begin(), listing.end(), [](const FileEntry& a, const FileEntry& b)
+            {
+                if (a.is_dir != b.is_dir)
+                    return a.is_dir;
+                return a.upper < b.upper;
+            });
+
+        listing_dir = current_save_dir;
+        listing_time = now;
+    }
+
+    // Get length of the directory
+    current_save_dir_length = (int)listing.size();
+
+    // Draw them
+    const int first_row = std::max(0, sample_offset_y);
+    for (int i = first_row; i < (int)listing.size() && i < file_display_count + first_row; i++)
+    {
+        const FileEntry& entry = listing[i];
+
+        // Get the highlighted path
+        if (i - first_row == cursor_y)
+        {
+            selected_path = entry.path;
+            selected_path_isdir = entry.is_dir;
+            if (selected_path_isdir)
+                selected_path += "\\";
+        }
+
+        // Draw the entry, relative to the current folder
+        const size_t skip = std::min(entry.upper.size(), current_save_dir.size());
+        const std::string name = entry.upper.substr(skip);
+        if (entry.is_file)
+            geptr->DrawTextString(1, 3 + i - first_row, geptr->entity, name, i - first_row == cursor_y ? primary_text_b : primary_text_a);
+        else
+            geptr->DrawTextString(1, 3 + i - first_row, geptr->entity, name, i - first_row == cursor_y ? header_text_b : header_text_a);
+    }
+}
+
 // Draw the map for where you are in the UI
 void DrawMap()
 {
@@ -2242,15 +2324,81 @@ void EditorControl()
     // Handle input for the settings menu
     if (state == m_options && !breakend)
     {
-        int position = cursor_y;
-        // Handle edits
-        if (inp->is_a_down() && (goup || godown || goleft || goright))
+        if (global_settings->loading_menu == true)
         {
-            // Handle the different types
-            switch (global_settings->setting_types[position])
+            // Modify value or open dir
+            if (inp->is_a_pressed())
             {
+                // Open directory
+                if (selected_path_isdir)
+                {
+                    current_save_dir_length = 0;
+                    sample_offset_y = 0;
+                    cursor_y = 0;
+                    current_save_dir = selected_path;
+                }
+                // Open file
+                else
+                {
+                    // Load the song file
+                }
+            }
+            // Go up a directory
+            if (inp->is_b_pressed())
+            {
+                if (current_save_dir != save_folder + "\\")
+                {
+                    // Remove trailing backslash
+                    current_save_dir = current_save_dir.substr(0, current_save_dir.length() - 1);
+                    // Remove all to the last backslash
+                    current_save_dir = current_save_dir.substr(0, current_save_dir.find_last_of('\\') + 1);
+                    // Reset
+                    current_save_dir_length = 0;
+                    sample_offset_y = 0;
+                    cursor_y = 0;
+                }
+            }
+            // Moving
+            else
+            {
+                cursor_y += godown - goup;
+            }
+
+            // wrap the cursor and clamp offsets
+            if (cursor_y + sample_offset_y > current_save_dir_length - 1)
+            {
+                cursor_y = 0;
+                sample_offset_y = 0;
+            }
+            if (cursor_y + sample_offset_y < 0)
+            {
+                cursor_y = std::min(current_save_dir_length - 1, file_display_count - 1);
+                sample_offset_y = std::max(0, current_save_dir_length - file_display_count);
+            }
+
+            // Move the page
+            if (cursor_y > file_display_count - 1)
+                sample_offset_y += 1;
+            if (cursor_y < 0)
+                sample_offset_y -= 1;
+
+            cursor_y = SDL_clamp(cursor_y, 0, file_display_count - 1);
+            sample_offset_y = SDL_clamp(sample_offset_y, 0, std::max(0, current_save_dir_length - file_display_count));
+
+            // Draw the load menu
+            DrawLoadUI();
+        }
+        else
+        {
+            int position = cursor_y;
+            // Handle edits
+            if (inp->is_a_down() && (goup || godown || goleft || goright))
+            {
+                // Handle the different types
+                switch (global_settings->setting_types[position])
+                {
                 case settings::number:
-                    
+
                     // Read
                     auto temp = global_settings->setting_pointers[position]->load();
 
@@ -2305,57 +2453,64 @@ void EditorControl()
                     }
 
                     break;
+                }
             }
-        }
-        // Handle navigation
-        else if (inp->is_select_down())
-        {
-            // Go to the page below
-            if (godown)
+            // Handle navigation
+            else if (inp->is_select_down())
             {
-                // Song
-                state = m_song;
-                cursor_x = SDL_clamp(cursor_x, 0, song_grid_w - 1);
-                cursor_y = SDL_clamp(cursor_y, 0, song_grid_h - 1);
-                breakend = true;
+                // Go to the page below
+                if (godown)
+                {
+                    // Song
+                    state = m_song;
+                    cursor_x = SDL_clamp(cursor_x, 0, song_grid_w - 1);
+                    cursor_y = SDL_clamp(cursor_y, 0, song_grid_h - 1);
+                    breakend = true;
+                }
             }
-        }
-        // Handle buttons
-        else if (inp->is_a_pressed())
-        {
-            if (global_settings->setting_labels[position] == "SAVE")
+            // Handle buttons
+            else if (inp->is_a_pressed())
             {
-				waiting_for_save = true;
-				trckrkb->listen(file_name);
+                if (global_settings->setting_labels[position] == "SAVE")
+                {
+                    waiting_for_save = true;
+                    trckrkb->listen(file_name);
+                }
+                if (global_settings->setting_labels[position] == "LOAD")
+                {
+					global_settings->loading_menu = true;
+					cursor_y = 0;
+					sample_offset_y = 0;
+                }
             }
+            // Moving
+            else
+            {
+                cursor_y += godown - goup;
+            }
+
+            // Do save process?
+            if (waiting_for_save == true && trckrkb->getStatus() == false)
+            {
+                file_name = trckrkb->getInput();
+                // Create song save folder if it does not exist
+                std::error_code ec;
+                if (!std::filesystem::exists(save_folder, ec))
+                    std::filesystem::create_directory(save_folder, ec);
+                // Save the project
+                DoSave(save_folder + "\\" + file_name + ".txt");
+                waiting_for_save = false;
+            }
+
+            // Wrap cursor
+            if (cursor_y > ((int)(global_settings->setting_labels.size()) - 1))
+                cursor_y = 0;
+            if (cursor_y < 0)
+                cursor_y = ((int)(global_settings->setting_labels.size()) - 1);
+
+            // Draw UI
+            DrawOptionsUI(position);
         }
-        // Moving
-        else
-        {
-            cursor_y += godown - goup;
-        }
-
-        // Do save process?
-		if (waiting_for_save == true && trckrkb->getStatus() == false)
-		{
-			file_name = trckrkb->getInput();
-            // Create song save folder if it does not exist
-            std::error_code ec;
-            if (!std::filesystem::exists(save_folder, ec))
-                std::filesystem::create_directory(save_folder, ec);
-			// Save the project
-            DoSave(save_folder + "\\" + file_name + ".txt");
-			waiting_for_save = false;
-		}
-
-        // Wrap cursor
-        if (cursor_y > ((int)(global_settings->setting_labels.size()) - 1))
-            cursor_y = 0;
-        if (cursor_y < 0)
-            cursor_y = ((int)(global_settings->setting_labels.size()) - 1);
-
-        // Draw UI
-        DrawOptionsUI(position);
     }
 
     // Handle input for the song menu
@@ -4029,8 +4184,6 @@ void EditorControl()
     {
         if (instrumentlist[open_instrument]->type == ChannelType::file) // Sample loader
         {
-            // TODO: Implement safety for missing files or directories (Like if the user deletes the directory or file)
-
             // Modify value or open dir
             if (inp->is_a_pressed())
             {

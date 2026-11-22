@@ -2341,6 +2341,7 @@ void EditorControl()
                 else
                 {
                     // Load the song file
+					DoLoad(selected_path);
                 }
             }
             // Go up a directory
@@ -2356,6 +2357,12 @@ void EditorControl()
                     current_save_dir_length = 0;
                     sample_offset_y = 0;
                     cursor_y = 0;
+                }
+                else
+                {
+                    global_settings->loading_menu = false;
+                    cursor_y = 0;
+                    sample_offset_y = 0;
                 }
             }
             // Moving
@@ -4532,6 +4539,77 @@ bool DoSave(std::string file_name)
     // Write end to the save file
     save_file = "\n[END]";
     append(file_name, save_file);
+
+    return true;
+}
+
+// Do load process
+// std::string file_name : Name of the save file
+bool DoLoad(std::string file_name)
+{
+    // Stop playback
+    StopAllChannels();
+
+    // Cleanup all dynamically allocated data
+    delete[] songgrid;
+    // Free all lists
+    int i = 0;
+    for (auto o : chainlist)
+    {
+        chainlist[i++] = nullptr;
+        delete o;
+    }
+    i = 0;
+    for (auto o : phraselist)
+    {
+        phraselist[i++] = nullptr;
+        delete o;
+    }
+    i = 0;
+    for (auto o : instrumentlist)
+    {
+        instrumentlist[i++] = nullptr;
+        delete o;
+    }
+    i = 0;
+    for (auto o : tablelist)
+    {
+        tablelist[i++] = nullptr;
+        delete o;
+    }
+    delete global_settings;
+    global_settings = new settings();
+
+    // Init song phrase list
+    songgrid = new int* [rowcount];
+    for (int i = 0; i < rowcount; i++)
+        songgrid[i] = new int[channelcount];
+    for (int y = 0; y < rowcount; y++)
+    {
+        for (int x = 0; x < channelcount; x++)
+        {
+            songgrid[y][x] = -1;
+        }
+    }
+
+    // Reset important variables
+    copied_chain = -1;
+    copied_phrase = -1;
+    copied_note = -9999;
+    copied_instr = -1;
+    copied_effect = -1;
+    copied_effect_param = -1;
+    copied_smple = -1;
+    copied_tble = -1;
+    open_channel = -1;
+    open_chain = -1;
+    open_chain_index = 0;
+    open_phrase = -1;
+    open_phrase_index = 0;
+    playing_channel = -1;
+    open_instrument = -1;
+    open_sample = -1;
+    open_table = -1;
 
     return true;
 }

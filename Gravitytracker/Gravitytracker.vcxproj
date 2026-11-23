@@ -43,6 +43,7 @@
     <ProjectGuid>{13298e10-7d73-41b9-992b-de45e8241427}</ProjectGuid>
     <RootNamespace>GravityEngine</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Gravitytracker</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

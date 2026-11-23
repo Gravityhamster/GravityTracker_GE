@@ -66,6 +66,7 @@ int current_save_dir_length = 0;
 std::string save_folder = ".\\Saves";
 std::string current_save_dir = save_folder + "\\";
 std::string file_name = "";
+std::string file_ext = ".gtrk";
 std::string main_dir = ".\\SampleLibrary\\";
 std::string current_dir = main_dir;
 std::string selected_path = "";
@@ -77,6 +78,7 @@ int** songgrid;
 settings* global_settings;
 keyboard* trckrkb = new keyboard();
 bool waiting_for_save = false;
+std::string debug_string = "";
 
 // Data structures
 std::vector<instrument*> instrumentlist;
@@ -161,7 +163,7 @@ void PreGameLoop()
         std::to_string(channellist[0].chain_ptr) + " - " +
         std::to_string(channellist[0].phrase_ptr) + " - " +
         std::to_string(channellist[0].step_ptr) + " - " +
-        std::to_string(channellist[0].tick_ptr) + "     " + std::to_string(bpm.load()),
+        std::to_string(channellist[0].tick_ptr) + "     " + std::to_string(bpm.load()) + " " + debug_string,
         primary_text_a);
     
     // Draw the keyboard if necessary

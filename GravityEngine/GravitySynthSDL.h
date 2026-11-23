@@ -459,7 +459,7 @@ public:
         // Step panning
         if (voices[voice_index]->pan_freq != 0)
         {
-            voices[voice_index]->pan_phase += voices[voice_index]->pan_freq / 100;
+            voices[voice_index]->pan_phase += voices[voice_index]->pan_freq / 10;
             (*new_pan) = (sin(voices[voice_index]->pan_phase * 2. * PI) / 2) + 0.5;
             if (voices[voice_index]->pan_phase > 1.)
                 voices[voice_index]->pan_phase -= 1.;

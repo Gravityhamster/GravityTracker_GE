@@ -281,6 +281,7 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type
         case 'K': // K : Kill
             // Kill the voice
             v->will_stop_timer = f_p;
+            debug_string += " KILL";
             break;
         }
     }
@@ -341,6 +342,8 @@ void GetFX(int channel_index, ChannelType inst_type, int f, int fx1, int fx1_p, 
 // step_ptr : Phrase progress index
 void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
 {
+    debug_string = "";
+
     std::scoped_lock lock(audiosampler->batch_mutex, audiosynth->batch_mutex);
 
     // Get frequency to play (the phrase may have been removed or the pointers may be out of range)
@@ -388,6 +391,7 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             // Init voice
             auto v = audiosynth->voices[channel_index];
 
+            v->will_stop_timer = -1;
             v->stg_base_freq = NoteFreq(f) + instrumentlist[i]->detune;
             v->stg_swpd_freq = v->stg_base_freq.load();
             v->stg_volume = instrumentlist[i]->volume;
@@ -442,6 +446,7 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             // Init voice
             auto v = audiosampler->voices[channel_index];
 
+            v->will_stop_timer = -1;
             v->stg_step_freq = NoteFreq(f) + instrumentlist[i]->detune;
             v->stg_swpd_freq = v->stg_step_freq.load();
             v->base_freq = NoteFreq(instrumentlist[i]->base_pitch);
@@ -2505,7 +2510,7 @@ void EditorControl()
                 if (!std::filesystem::exists(save_folder, ec))
                     std::filesystem::create_directory(save_folder, ec);
                 // Save the project
-                DoSave(save_folder + "\\" + file_name + ".txt");
+                DoSave(save_folder + "\\" + file_name + file_ext);
                 waiting_for_save = false;
             }
 
@@ -4505,50 +4510,50 @@ bool FileExists(std::string file_name)
 }
 
 // Do save process
-// std::string file_name : Name of the save file
-bool DoSave(std::string file_name)
+// std::string saved_file_name : Name of the save file
+bool DoSave(std::string saved_file_name)
 {
     std::string save_file;
 
-    if (FileExists(file_name))
-        if (std::remove(file_name.c_str()) != 0)
+    if (FileExists(saved_file_name))
+        if (std::remove(saved_file_name.c_str()) != 0)
             return false;
 
     // Settings string
     save_file = global_settings->GetSettingsSaveString();
-    append(file_name, save_file);
+    append(saved_file_name, save_file);
     // Song grid
     save_file = GetSongSaveString();
-    append(file_name, save_file);
+    append(saved_file_name, save_file);
     // Chain list
     save_file = GetChainSaveString();
-    append(file_name, save_file);
+    append(saved_file_name, save_file);
     // Phrase list
     save_file = GetPhraseSaveString();
-    append(file_name, save_file);
+    append(saved_file_name, save_file);
     // Instrument list
     save_file = GetInstrumentSaveString();
-    append(file_name, save_file);
+    append(saved_file_name, save_file);
     // Sample list
     save_file = GetSampleSaveString();
-    append(file_name, save_file);
+    append(saved_file_name, save_file);
     // Table list
     save_file = GetTableSaveString();
-    append(file_name, save_file);
-
-    // Write end to the save file
-    save_file = "\n[END]";
-    append(file_name, save_file);
+    append(saved_file_name, save_file);
 
     return true;
 }
 
 // Do load process
-// std::string file_name : Name of the save file
-bool DoLoad(std::string file_name)
+// std::string loaded_file_name : Name of the save file
+bool DoLoad(std::string loaded_file_name)
 {
     // Stop playback
     StopAllChannels();
+
+    // Delete all sounds from memory
+    for (int s = 0; s < geptr->GetSoundCount(); s++)
+	    geptr->DeleteSound(s);
 
     // Cleanup all dynamically allocated data
     delete[] songgrid;
@@ -4611,11 +4616,23 @@ bool DoLoad(std::string file_name)
     open_sample = -1;
     open_table = -1;
 
+	// Load the name of the file
+	file_name = loaded_file_name.substr(loaded_file_name.find_last_of("\\") + 1);
+    // Remove the file extension
+    if (file_name.find(file_ext) != std::string::npos)
+        file_name = file_name.substr(0, file_name.find(file_ext));
+    // Truncate to 10 chars
+    if (file_name.size() > 10)
+		file_name = file_name.substr(0, 10);
+
     std::string state = "";
-    std::ifstream file(file_name);
+    std::ifstream file(loaded_file_name);
     std::string str;
     while (std::getline(file, str))
     {
+        if (str == "")
+            continue;
+
         // Check state change
         if (str.substr(0, 2) == "-=" && str.substr(str.size() - 2, 2) == "=-")
         {
@@ -4648,23 +4665,247 @@ bool DoLoad(std::string file_name)
 		}
 		else if (state == "-=SONG=-")
 		{
+            if (str != ";")
+			{
+                // Get the y value
+				int start = str.find("y") + 1;
+				int f = str.find("x");
+				int end = f - start;
+				int y = std::stoi(str.substr(start, end));
+				// Get the x value
+				start = str.find("x") + 1;
+				f = str.find(" : ");
+				end = f - start;
+				int x = std::stoi(str.substr(start, end));
+				// Get the cell value
+				start = str.find(" : ") + 3;
+				f = str.find("_");
+				end = f - start;
+				int cell_value = std::stoi(str.substr(start, end));
+				// Set the cell value
+				songgrid[y][x] = cell_value;
+            }
 		}
 		else if (state == "-=CHAINS=-")
 		{
-		}
+            if (str != ";")
+            {
+                // Get the y value
+                int start = str.find("y") + 1;
+                int f = str.find(" : ");
+                int end = f - start;
+                int y = std::stoi(str.substr(start, end));
+
+                // Create the chain
+			    InsertAt(&chainlist, y, new chain());
+
+                {
+                    // Find the arr
+                    int start = str.find("arr{") + 4;
+                    int comma_count = 0;
+                    int str_index = start;
+                    std::string value = "";
+                    while (comma_count < 16)
+                    {
+                        while (str[str_index] != ',')
+                        {
+                            // Concat the char to the value string and then increment the index
+                            value += str[str_index];
+                            str_index++;
+                        }
+                        // Set the value to the chain's arr and then reset it to blank
+                        chainlist[y]->arr[comma_count++] = std::stoi(value);
+                        value = "";
+                        str_index++;
+                    }
+                }
+
+                {
+                    // Find the arr_transpose
+                    int start = str.find("arr_transpose{") + 14;
+                    int comma_count = 0;
+                    int str_index = start;
+                    std::string value = "";
+                    while (comma_count < 16)
+                    {
+                        while (str[str_index] != ',')
+                        {
+                            // Concat the char to the value string and then increment the index
+                            value += str[str_index];
+                            str_index++;
+                        }
+                        // Set the value to the chain's transpose arr and then reset it to blank
+                        chainlist[y]->arr_transpose[comma_count++] = std::stoi(value);
+                        value = "";
+                        str_index++;
+                    }
+                }
+            }
+        }
 		else if (state == "-=PHRASES=-")
 		{
+            if (str != ";")
+            {
+                // Get the y value
+                int start = str.find("y") + 1;
+                int f = str.find(" : ");
+                int end = f - start;
+                int y = std::stoi(str.substr(start, end));
+
+                // Create the phrase
+                InsertAt(&phraselist, y, new phrase());
+
+                // Loop through all 16 rows
+                for (int index = 0; index < 16; index++)
+                {
+                    // Find the arr for this index
+                    std::string identifier = "arr[" + std::to_string(index) + "]{";
+                    int start = str.find(identifier) + identifier.size();
+                    int comma_count = 0;
+                    int str_index = start;
+                    std::string value = "";
+                    while (comma_count < 8)
+                    {
+                        while (str[str_index] != ',')
+                        {
+                            // Concat the char to the value string and then increment the index
+                            value += str[str_index];
+                            str_index++;
+                        }
+                        // Set the value to the phrase's arr and then reset it to blank
+                        phraselist[y]->arr[index][comma_count++] = std::stoi(value);
+                        value = "";
+                        str_index++;
+                    }
+                }
+            }
 		}
 		else if (state == "-=INSTRUMENTS=-")
 		{
+            if (str != ";")
+            {
+                // Get the y value
+                int start = str.find("y") + 1;
+                int f = str.find(" : ");
+                int end = f - start;
+                int y = std::stoi(str.substr(start, end));
+
+                // Create the instrument
+                InsertAt(&instrumentlist, y, new instrument());
+
+				// Get all properties of the instrument
+				instrumentlist[y]->type = static_cast<ChannelType>(RipInstrumentProperty("type", str));
+				instrumentlist[y]->detune_edit = RipInstrumentProperty("detune_edit", str);
+				instrumentlist[y]->detune = RipInstrumentProperty("detune", str);
+				instrumentlist[y]->volume_edit = RipInstrumentProperty("volume_edit", str);
+				instrumentlist[y]->volume = RipInstrumentProperty("volume", str);
+				instrumentlist[y]->volume_freq = RipInstrumentProperty("volume_freq", str);
+				instrumentlist[y]->pan_edit = RipInstrumentProperty("pan_edit", str);
+				instrumentlist[y]->panning = RipInstrumentProperty("panning", str);
+				instrumentlist[y]->pan_freq = RipInstrumentProperty("pan_freq", str);
+				instrumentlist[y]->pitch_freq_edit = RipInstrumentProperty("pitch_freq_edit", str);
+				instrumentlist[y]->pitch_freq = RipInstrumentProperty("pitch_freq", str);
+				instrumentlist[y]->cutoff_edit = RipInstrumentProperty("cutoff_edit", str);
+				instrumentlist[y]->cutoff = RipInstrumentProperty("cutoff", str);
+				instrumentlist[y]->cutoff_freq = RipInstrumentProperty("cutoff_freq", str);
+				instrumentlist[y]->resonance_edit = RipInstrumentProperty("resonance_edit", str);
+				instrumentlist[y]->resonance = RipInstrumentProperty("resonance", str);
+				instrumentlist[y]->resonance_freq = RipInstrumentProperty("resonance_freq", str);
+				instrumentlist[y]->waveform = static_cast<SynthWaveForm>(RipInstrumentProperty("waveform", str));
+				instrumentlist[y]->filter = static_cast<FilterType>(RipInstrumentProperty("filter", str));
+                instrumentlist[y]->pw_edit = RipInstrumentProperty("pw_edit", str);
+                instrumentlist[y]->pulse_width = RipInstrumentProperty("pulse_width", str);
+                instrumentlist[y]->pulse_width_freq = RipInstrumentProperty("pulse_width_freq", str);
+                instrumentlist[y]->base_pitch = RipInstrumentProperty("base_pitch", str);
+                instrumentlist[y]->sample_index = RipInstrumentProperty("sample_index", str);
+                instrumentlist[y]->start_time_ms = RipInstrumentProperty("start_time_ms", str);
+                instrumentlist[y]->mid_time_ms = RipInstrumentProperty("mid_time_ms", str);
+                instrumentlist[y]->end_time_ms = RipInstrumentProperty("end_time_ms", str);
+                instrumentlist[y]->loop = RipInstrumentProperty("loop", str);
+                instrumentlist[y]->table_index = RipInstrumentProperty("table_index", str);
+            }
 		}
 		else if (state == "-=SAMPLES=-")
 		{
+            if (str != ";")
+            {
+                // Get the y value
+                int start = str.find("y") + 1;
+                int f = str.find(" : ");
+                int end = f - start;
+                int y = std::stoi(str.substr(start, end));
+
+                // Create the sample
+                InsertAt(&samplelist, y, new sample());
+
+                // Get the path to the sound sample in windows
+				start = str.find("path=\"") + 6;
+				end = str.find("\"", start);
+				samplelist[y]->path = str.substr(start, end - start);
+				samplelist[y]->sound_index = geptr->AddSound(samplelist[y]->path.c_str());
+            }
 		}
         else if (state == "-=TABLES=-")
         {
+            if (str != ";")
+            {
+                // Get the y value
+                int start = str.find("y") + 1;
+                int f = str.find(" : ");
+                int end = f - start;
+                int y = std::stoi(str.substr(start, end));
+
+                // Create the table
+                InsertAt(&tablelist , y, new table());
+
+                // Loop through all 16 rows
+                for (int index = 0; index < 16; index++)
+                {
+                    // Find the arr for this index
+                    std::string identifier = "arr[" + std::to_string(index) + "]{";
+                    int start = str.find(identifier) + identifier.size();
+                    int comma_count = 0;
+                    int str_index = start;
+                    std::string value = "";
+                    while (comma_count < 7)
+                    {
+                        while (str[str_index] != ',')
+                        {
+                            // Concat the char to the value string and then increment the index
+                            value += str[str_index];
+                            str_index++;
+                        }
+                        // Set the value to the table's arr and then reset it to blank
+                        tablelist[y]->arr[index][comma_count++] = std::stoi(value);
+                        value = "";
+                        str_index++;
+                    }
+                }
+            }
         }
     }
 
+    // Set the set_bpm
+    set_bpm = bpm;
+    ChangeBPM(bpm);
+
     return true;
+}
+
+// Rip instrument property
+// std::string identifier : Name of the property to rip (exclude the = sign at the end)
+// std::string str : String to rip the property from
+double RipInstrumentProperty(std::string identifier, std::string str)
+{
+    if (str.find(identifier) == std::string::npos)
+        return -1;
+    identifier += "=";
+	// Find the identifier
+	int start = str.find(identifier) + identifier.size();
+	// Seek end
+	int end = start;
+	while (str[end] != ',' && str[end] != '_') end++;
+	// Get the value
+	std::string value = str.substr(start, end - start);
+	return std::stod(value);
 }

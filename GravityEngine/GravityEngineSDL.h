@@ -1044,6 +1044,12 @@ public:
         sounds[index] = nullptr;
     }
 
+	// Get the number of sounds in the sound list
+	int GetSoundCount()
+	{
+		return sounds.size();
+	}
+
     // Bind a synth to a channel
 	// GravityEngine_Synth* s : Pointer to the synth to bind to the channel
     // int channel : Integer channel index to play the sound at the index on

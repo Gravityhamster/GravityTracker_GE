@@ -188,3 +188,8 @@ bool DoSave(std::string file_name);
 // Do load process
 // std::string file_name : Name of the save file
 bool DoLoad(std::string file_name);
+
+// Rip instrument property
+// std::string identifier : Name of the property to rip (exclude the = sign at the end)
+// std::string str : String to rip the property from
+double RipInstrumentProperty(std::string identifier, std::string str);

@@ -105,6 +105,7 @@ extern int current_dir_length; // Track the length of the current directory stri
 extern int current_save_dir_length; // Track the length of the current directory string for file browser
 extern std::string save_folder; // Directory for project files
 extern std::string file_name; // Name of the project file
+extern std::string file_ext; // File extension of the project file
 extern std::string main_dir; // Main directory for file browser
 extern std::string current_dir; // Current directory for file browser
 extern std::string current_save_dir; // Current directory for save file browser
@@ -115,6 +116,7 @@ extern menu state; // What menu are we in
 extern int inputgetter; // Input getter
 extern int** songgrid; //[0xffff][64];
 extern bool waiting_for_save; // Flag for if we are waiting for the keyboard to return our name so we can save
+extern std::string debug_string;
 
 // Tracker object concepts --
 
@@ -296,8 +298,7 @@ public:
     {
         std::string s = "";
 
-        s += "path=" + path + ",";
-        s += "index=" + std::to_string(sound_index) + ";";
+        s += "path=\"" + path + "\"_";
         
         return s;
     }
@@ -426,7 +427,9 @@ public:
         s += "start_time_ms=" + std::to_string(start_time_ms) + ",";
         s += "mid_time_ms=" + std::to_string(mid_time_ms) + ",";
         s += "end_time_ms=" + std::to_string(end_time_ms) + ",";
-        s += "loop=" + std::to_string(loop) + "_";
+        s += "loop=" + std::to_string(loop) + ",";
+        s += "table_index=" + std::to_string(table_index) + ",";
+        s += "_";
 
         return s;
     }

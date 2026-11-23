@@ -23,6 +23,7 @@
 
 // Get BPM from the tracker
 extern std::atomic<int> bpm;
+extern std::string debug_string;
 
 // For flushing denormal floats to zero (x86/x64 only)
 #if defined(__SSE__) || defined(_M_X64) || defined(_M_IX86)
@@ -389,6 +390,8 @@ public:
                             else
                             {
                                 v->start_playing = false;
+                                debug_string += "END";
+                                v->will_stop_timer = -1;
                                 pos = 0.0;
                                 break;
                             }
@@ -500,7 +503,7 @@ public:
         // Step panning
         if (voices[voice_index]->pan_freq != 0)
         {
-            voices[voice_index]->pan_phase += voices[voice_index]->pan_freq / 100;
+            voices[voice_index]->pan_phase += voices[voice_index]->pan_freq / 10;
             (*new_pan) = (sin(voices[voice_index]->pan_phase * 2. * PI) / 2) + 0.5;
             if (voices[voice_index]->pan_phase > 1.)
                 voices[voice_index]->pan_phase -= 1.;

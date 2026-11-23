@@ -9,7 +9,7 @@
 #include <system_error>
 #include <iostream>
 #include <fstream>
-#include <cstdio>
+#include "version.h"
 #include "GravityTempo.h"
 
 // Find string f in s
@@ -281,7 +281,6 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type
         case 'K': // K : Kill
             // Kill the voice
             v->will_stop_timer = f_p;
-            debug_string += " KILL";
             break;
         }
     }
@@ -963,6 +962,9 @@ void DrawOptionsUI(int position)
             geptr->DrawTextString(6, 3 + i, geptr->entity, outstr, i == position ? primary_text_b : primary_text_a);
         }
     }
+
+    // Draw the version number in the bottom left corner
+	geptr->DrawTextString(0, geptr->GetCanvasH()-1, geptr->entity, "V" + std::to_string(VERSION_MAJOR) + "." + std::to_string(VERSION_MINOR) + "." + std::to_string(VERSION_PATCH) + "-" + std::to_string(VERSION_BUILD), primary_text_a);
 }
 
 // Draw Song Editor UI

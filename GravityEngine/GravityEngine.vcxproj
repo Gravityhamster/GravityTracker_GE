@@ -19,20 +19,23 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="base64\base64.h" />
     <ClInclude Include="GravityEngineSDL.h" />
     <ClInclude Include="GravityEngineTypes.h" />
     <ClInclude Include="GravitySamplerSDL.h" />
     <ClInclude Include="GravitySynthSDL.h" />
     <ClInclude Include="GravityTempo.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SPSC_Queue.h" />
+    <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="base64\base64.cpp" />
     <ClCompile Include="Gravitytracker.cpp" />
     <ClCompile Include="TrackerTypesAndVariables.h" />
     <ClCompile Include="TrackerFunctionDefinitions.cpp" />
     <ClCompile Include="TrackerFunctionSignatures.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="version.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -129,6 +132,9 @@
       <AdditionalLibraryDirectories>$(SolutionDir)\$(ProjectName)\SDL\lib\x64;$(SolutionDir)\$(ProjectName)\SDL_TTF\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>SDL3.lib;SDL3_test.lib;SDL3_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>powershell -ExecutionPolicy Bypass -File "$(ProjectDir)increment_build.ps1"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>

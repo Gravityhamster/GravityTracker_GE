@@ -33,7 +33,10 @@
     <ClInclude Include="GravityTempo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="base64\base64.h">
+    <ClInclude Include="version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -50,8 +53,10 @@
     <ClCompile Include="TrackerFunctionSignatures.h">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="base64\base64.cpp">
-      <Filter>Header Files</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="version.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

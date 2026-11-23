@@ -390,7 +390,6 @@ public:
                             else
                             {
                                 v->start_playing = false;
-                                debug_string += "END";
                                 v->will_stop_timer = -1;
                                 pos = 0.0;
                                 break;

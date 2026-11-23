@@ -1,7 +1,6 @@
 #pragma once
 #include "GravityEngineSDL.h"
 #include "TrackerFunctionSignatures.h"
-#include "base64/base64.h"
 
 // Reference for the core of the Gravity Engine
 extern GravityEngine_Core* geptr;

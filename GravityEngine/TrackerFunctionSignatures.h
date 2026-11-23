@@ -131,7 +131,7 @@ void StopSequenceThread();
 std::string IntToHexString(int i);
 
 // Draw Options Editor UI
-void DrawOptionsUI();
+void DrawOptionsUI(int position);
 
 // Draw Song Editor UI
 // off_x : UI offset on the x axis

@@ -180,7 +180,7 @@ public:
         for (auto l : setting_labels)
         {
             if (setting_pointers[i] != nullptr)
-                s += l + " : " + std::to_string(setting_pointers[i]->load()) + "\n";
+                s += l + " : " + std::to_string(setting_pointers[i]->load()) + "_\n";
             i++;
         }
 
@@ -426,7 +426,7 @@ public:
         s += "start_time_ms=" + std::to_string(start_time_ms) + ",";
         s += "mid_time_ms=" + std::to_string(mid_time_ms) + ",";
         s += "end_time_ms=" + std::to_string(end_time_ms) + ",";
-        s += "loop=" + std::to_string(loop) + ";";
+        s += "loop=" + std::to_string(loop) + "_";
 
         return s;
     }

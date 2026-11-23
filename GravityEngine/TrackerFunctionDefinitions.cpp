@@ -4611,5 +4611,60 @@ bool DoLoad(std::string file_name)
     open_sample = -1;
     open_table = -1;
 
+    std::string state = "";
+    std::ifstream file(file_name);
+    std::string str;
+    while (std::getline(file, str))
+    {
+        // Check state change
+        if (str.substr(0, 2) == "-=" && str.substr(str.size() - 2, 2) == "=-")
+        {
+            state = str;
+            continue;
+        }
+
+        // Process depending on state
+        if (state == "-=SETTINGS=-")
+        {
+            if (str != ";")
+            {
+				// Get the name of the saved property
+				std::string name = str.substr(0, str.find(" : "));
+                // Get the value of the saved property
+                int start = str.find(" : ") + 3;
+                int f = str.find("_");
+                int end = f - start;
+				std::string value = str.substr(start, end);
+				// Find the name's index and then set the value to the property at that index
+                for (int i = 0; i < global_settings->setting_labels.size(); i++)
+                {
+					if (global_settings->setting_labels[i] == name)
+					{
+						(*global_settings->setting_pointers[i]) = std::stoi(value);
+						break;
+					}
+                }
+            }
+		}
+		else if (state == "-=SONG=-")
+		{
+		}
+		else if (state == "-=CHAINS=-")
+		{
+		}
+		else if (state == "-=PHRASES=-")
+		{
+		}
+		else if (state == "-=INSTRUMENTS=-")
+		{
+		}
+		else if (state == "-=SAMPLES=-")
+		{
+		}
+        else if (state == "-=TABLES=-")
+        {
+        }
+    }
+
     return true;
 }

@@ -1,0 +1,12 @@
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/SDL3-static.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/SDL3_test.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/SDL_uclibc.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/uninstall.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/package.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/package_source.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/list_install_components.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/install.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/install/local.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/build/CMakeFiles/install/strip.dir

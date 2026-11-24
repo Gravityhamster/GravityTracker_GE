@@ -1,0 +1,19 @@
+CMakeFiles/SDL3-static.dir/src/render/software/SDL_render_sw.c.o: \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_render_sw.c \
+ /usr/include/stdc-predef.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/SDL_internal.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/../SDL_sysrender.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/../../video/SDL_surface_c.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/../../video/SDL_blit.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/../SDL_yuv_sw_c.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_render_sw_c.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_draw.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/../../video/SDL_surface_c.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_blendfillrect.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_blendline.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_blendpoint.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_drawline.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_drawpoint.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_rotate.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_triangle.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/../../video/SDL_pixels_c.h

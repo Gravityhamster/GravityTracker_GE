@@ -1,0 +1,9 @@
+CMakeFiles/SDL3-static.dir/src/render/software/SDL_drawline.c.o: \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_drawline.c \
+ /usr/include/stdc-predef.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/SDL_internal.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_draw.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/../../video/SDL_surface_c.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/../../video/SDL_blit.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_drawline.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/render/software/SDL_drawpoint.h

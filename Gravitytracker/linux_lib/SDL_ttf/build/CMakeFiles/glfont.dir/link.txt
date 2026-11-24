@@ -1,0 +1,1 @@
+/usr/bin/cc -O2 -g -DNDEBUG -Wl,--dependency-file=CMakeFiles/glfont.dir/link.d CMakeFiles/glfont.dir/examples/glfont.c.o -o glfont  /usr/lib/x86_64-linux-gnu/libGL.so libSDL3_ttf.a /usr/lib/x86_64-linux-gnu/libSDL3.so.0.4.2 /usr/lib/x86_64-linux-gnu/libharfbuzz.so /usr/lib/x86_64-linux-gnu/libfreetype.so

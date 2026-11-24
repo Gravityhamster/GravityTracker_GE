@@ -1,0 +1,13 @@
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/SDL3_ttf-static.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/glfont.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/showfont.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/testapp.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/testgputext.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/package.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/package_source.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/list_install_components.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/install.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/install/local.dir
+/mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL_ttf/build/CMakeFiles/install/strip.dir

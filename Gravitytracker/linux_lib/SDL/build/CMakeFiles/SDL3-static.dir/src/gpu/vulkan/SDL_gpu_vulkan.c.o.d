@@ -1,0 +1,33 @@
+CMakeFiles/SDL3-static.dir/src/gpu/vulkan/SDL_gpu_vulkan.c.o: \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/SDL_gpu_vulkan.c \
+ /usr/include/stdc-predef.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/SDL_internal.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/vulkan.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/vk_platform.h \
+ /usr/lib/gcc/x86_64-linux-gnu/15/include/stddef.h \
+ /usr/lib/gcc/x86_64-linux-gnu/15/include/stdint.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/vulkan_core.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_h264std.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codecs_common.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_h264std_encode.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_h264std.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_h265std.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_h265std_encode.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_h265std.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_h264std_decode.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_h265std_decode.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_av1std.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_av1std_decode.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/../vk_video/vulkan_video_codec_av1std.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/khronos/vulkan/vulkan_beta.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/include/SDL3/SDL_vulkan.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/include/SDL3/SDL_stdinc.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/include/SDL3/SDL_error.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/include/SDL3/SDL_video.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/include/SDL3/SDL_begin_code.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/include/SDL3/SDL_close_code.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../SDL_sysgpu.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/SDL_sysvideo.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/SDL_surface_c.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/../../video/SDL_blit.h \
+ /mnt/c/Users/IiBlu/source/repos/Gravityhamster/GravityTracker_GE/Gravitytracker/linux_lib/SDL/src/gpu/vulkan/SDL_gpu_vulkan_vkfuncs.h

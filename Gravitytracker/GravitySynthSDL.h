@@ -174,7 +174,7 @@ public:
             if (available_frames < buffer_frames * kBuffersAhead)
             {
                 // -= Timing: how long does it take to render one block? =-
-                auto t0 = std::chrono::high_resolution_clock::now();
+                auto t0 = std::chrono::steady_clock::now();
 
                 SDL_memset(buffer, 0, block_bytes);
 
@@ -405,7 +405,7 @@ public:
                 }
 
                 // -= Timing output (prints only when a block takes more than half its budget) =-
-                auto t1 = std::chrono::high_resolution_clock::now();
+                auto t1 = std::chrono::steady_clock::now();
                 double render_ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
                 double budget_ms = 1000.0 * block_frames / spec->freq;
                 if (render_ms > budget_ms * 0.5)

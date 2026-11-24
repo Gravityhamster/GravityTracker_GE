@@ -76,6 +76,22 @@ inline std::map<SynthWaveForm, std::string> waveform_to_string = {
     {SynthWaveForm::noise, "NOISE"}
 };
 
+// Per-voice output gain smoothing state. Only ever touched by the audio thread, so no atomics needed.
+// Smoothing the final L/R gains (rather than vol and pan separately) removes the step at block
+// boundaries when a tick changes volume or pan, without needing sin/cos per sample.
+struct VoiceGainSmooth
+{
+    float gain_l = 0.f;
+    float gain_r = 0.f;
+    bool  primed = false;   // false = snap to the target gain on the next block (new note)
+};
+
+// Smoothing time constant for volume/pan changes, in seconds.
+// Lower = snappier but more click-prone on big jumps; higher = smoother but laggier.
+#ifndef SYNTH_GAIN_SMOOTH_SECONDS
+#define SYNTH_GAIN_SMOOTH_SECONDS 0.003f
+#endif
+
 // Template for synth objects
 class GravityEngine_Synth
 {
@@ -131,6 +147,10 @@ public:
         const int block_bytes = block_samples * sizeof(float);
         float* buffer = (float*)SDL_malloc(block_bytes);
         bool first = true;
+
+        // One-pole gain smoother (see VoiceGainSmooth). The coefficient is independent of block size.
+        const float smooth_coef = 1.0f - expf(-1.0f / (SYNTH_GAIN_SMOOTH_SECONDS * (float)spec->freq));
+        std::vector<VoiceGainSmooth> gain_smooth(synth->voices.size());
 
         // Cheap noise generator (xorshift32) instead of mt19937 + distribution
         uint32_t noise_state = std::random_device{}() | 1u;
@@ -274,10 +294,20 @@ public:
                 }
 
                 // -= Phase 2: render every playing voice =-
-                for (auto v : synth->voices)
+                if (gain_smooth.size() < synth->voices.size())
+                    gain_smooth.resize(synth->voices.size());
+
+                for (size_t vi = 0; vi < synth->voices.size(); ++vi)
                 {
+                    auto v = synth->voices[vi];
+                    VoiceGainSmooth& sm = gain_smooth[vi];
+
                     if (!v->start_playing)
+                    {
+                        // Idle voice: the next note on this voice starts at its target gain
+                        sm.primed = false;
                         continue;
+                    }
 
                     // Parameters are constant across the block, so compute everything once
                     const SynthWaveForm waveform = v->waveform;
@@ -301,6 +331,15 @@ public:
                     {
                         gain_l = (1.0f - std::abs(0.5f - pan)) * vol;
                         gain_r = gain_l;
+                    }
+
+                    // gain_l / gain_r above are now TARGETS. Smoothed gains chase them every sample.
+                    float cur_l = sm.gain_l, cur_r = sm.gain_r;
+                    if (!sm.primed)
+                    {
+                        cur_l = gain_l;     // snap: keeps a hard note attack
+                        cur_r = gain_r;     // (use 0.f for both to get a short fade-in on note start)
+                        sm.primed = true;
                     }
 
                     // Pulse: sin(2*pi*p) > pw  <=>  p0 < p < 0.5 - p0
@@ -332,6 +371,8 @@ public:
                     {
                         // -= Raw waveform from the phase (0..1) =-
                         float s;
+                        double f;
+                        int d;
                         switch (waveform)
                         {
                         case SynthWaveForm::sine:
@@ -339,6 +380,14 @@ public:
                             break;
                         case SynthWaveForm::square:
                             s = (phase < 0.5f) ? 1.f : -1.f;
+                            /*s = 0;
+                            f = 1;
+                            d = 5;
+                            for (int i = 0; i < d; i++)
+                            {
+                                s += (4 * f * sinf(phase * 2.0f * PI)) / f * PI;
+                                f += 2;
+                            }*/
                             break;
                         case SynthWaveForm::pulse:
                             s = (phase > pulse_lo && phase < pulse_hi) ? 1.f : -1.f;
@@ -376,12 +425,16 @@ public:
                             else                                          s = bp;
                         }
 
+                        // Glide the gains toward their targets (no step at the block boundary)
+                        cur_l += (gain_l - cur_l) * smooth_coef;
+                        cur_r += (gain_r - cur_r) * smooth_coef;
+
                         if (channels == 1)
-                            out[i] += s * gain_l;
+                            out[i] += s * cur_l;
                         else
                         {
-                            out[i * 2 + 0] += s * gain_l;
-                            out[i * 2 + 1] += s * gain_r;
+                            out[i * 2 + 0] += s * cur_l;
+                            out[i * 2 + 1] += s * cur_r;
                         }
 
                         // Step and wrap the phase
@@ -395,6 +448,8 @@ public:
 
                     v->phase = phase;
                     v->lp = lp; v->bp = bp; v->hp = hp;
+                    sm.gain_l = cur_l;
+                    sm.gain_r = cur_r;
                 }
 
                 // Clamp the buffer to -1.0 to 1.0 to prevent clipping and distortion

@@ -2496,6 +2496,10 @@ void EditorControl()
 					cursor_y = 0;
 					sample_offset_y = 0;
                 }
+                if (global_settings->setting_labels[position] == "QUIT")
+                {
+                    geptr->End();
+                }
             }
             // Moving
             else

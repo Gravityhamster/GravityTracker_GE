@@ -162,6 +162,12 @@ public:
         setting_pointers.push_back(nullptr);
         setting_ranges.push_back({ -1, -1 });
         setting_types.push_back(button);
+
+        // Quit
+        setting_labels.push_back("QUIT");
+        setting_pointers.push_back(nullptr);
+        setting_ranges.push_back({ -1, -1 });
+        setting_types.push_back(button);
     }
 
     // Load from save string constructor

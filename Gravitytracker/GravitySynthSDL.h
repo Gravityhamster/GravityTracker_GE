@@ -33,7 +33,7 @@ extern std::atomic<int> bpm;
 
 // Set to 0 to silence the synth's once-every-2-seconds timing diagnostics
 #ifndef SYNTH_DIAG
-#define SYNTH_DIAG 1
+#define SYNTH_DIAG 0
 #endif
 
 // TODO: Any effects related directly to instrument automation should be implemented directly into the synth (i.e. vibrato, pitchsweep, fadein, fadeout, etc.)

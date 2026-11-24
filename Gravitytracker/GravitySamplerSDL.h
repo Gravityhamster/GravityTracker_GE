@@ -35,7 +35,7 @@ extern std::string debug_string;
 
 // Set to 0 to silence the sampler's once-every-2-seconds timing diagnostics
 #ifndef SAMPLER_DIAG
-#define SAMPLER_DIAG 1
+#define SAMPLER_DIAG 0
 #endif
 
 // TODO: Any effects related directly to instrument automation should be implemented directly into the sampler (i.e. vibrato, pitchsweep, fadein, fadeout, etc.)

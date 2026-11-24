@@ -4525,6 +4525,12 @@ bool DoSave(std::string saved_file_name)
         if (std::remove(saved_file_name.c_str()) != 0)
             return false;
 
+    // Stop the playing thread
+    StopSequenceThread();
+    // Stop playback
+    StopAllChannels();
+    pause_song = true;
+
     // Settings string
     save_file = global_settings->GetSettingsSaveString();
     append(saved_file_name, save_file);
@@ -4554,8 +4560,15 @@ bool DoSave(std::string saved_file_name)
 // std::string loaded_file_name : Name of the save file
 bool DoLoad(std::string loaded_file_name)
 {
+    // Stop the playing thread
+    StopSequenceThread();
     // Stop playback
     StopAllChannels();
+    pause_song = true;
+
+    // Test if the file exists
+    if (!FileExists(loaded_file_name))
+        return false;
 
     // Delete all sounds from memory
     for (int s = 0; s < geptr->GetSoundCount(); s++)

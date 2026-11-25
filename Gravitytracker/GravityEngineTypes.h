@@ -167,6 +167,10 @@ public:
     std::atomic<float> stg_pulse_width = 0.5;
 
     std::atomic<float> pitch_freq = 0;
+    std::atomic<float> vibrato_freq = 0;
+    std::atomic<float> vibrato_amplitude = 0;
+    std::atomic<float> vibrato_phase = 0;
+    std::atomic<float> vibrato_offset = 0;
     std::atomic<float> volume_freq = 0;
     std::atomic<float> cutoff_freq = 0;
     std::atomic<float> resonance_freq = 0;

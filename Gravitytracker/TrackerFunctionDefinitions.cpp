@@ -278,9 +278,61 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type
             outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
             v->stg_volume = std::stoi(outstr.substr(0, 4), 0, 16) / 65535.f;
             break;
+        case 'F': // F : Filter Cutoff Envelope
+            // Set volume freq
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->cutoff_freq = (std::stoi(outstr.substr(0, 4), 0, 16) - 32768) / 32768.f;
+            break;
+        case 'C': // C : Cutoff
+            // Set volume
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->stg_cutoff = std::stoi(outstr.substr(0, 4), 0, 16) / 65535.f;
+            break;
+        case 'R': // R : Resonance Envelope
+            // Set volume freq
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->resonance_freq = (std::stoi(outstr.substr(0, 4), 0, 16) - 32768) / 32768.f;
+            break;
+        case 'Q': // Q : Resonance
+            // Set volume
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->stg_resonance = std::stoi(outstr.substr(0, 4), 0, 16) / 65535.f;
+            break;
         case 'K': // K : Kill
             // Kill the voice
             v->will_stop_timer = f_p;
+            break;
+        case 'P': // P : Pitch Sweep Frequency
+            // Set pitch freq
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->pitch_freq = (std::stoi(outstr.substr(0, 4), 0, 16) - 32768) / 32768.f;
+            break;
+        case 'I': // I : Vibrato Frequency
+            // Set vibrato amplitude and freq
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->vibrato_amplitude = std::stoi(outstr.substr(0, 2), 0, 16) / 255.f;
+            v->vibrato_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f;
+            break;
+        case 'O': // O : Panning
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            if (outstr.substr(0, 2) == "80")
+                v->stg_panning = 0.5f;
+            else
+                v->stg_panning = std::stoi(outstr.substr(0, 2), 0, 16) / 255.f;
+            v->pan_freq = (std::stoi(outstr.substr(2, 2), 0, 16) - 128) / 128.f;
+            break;
+        case 'W': // W : Pulse Width
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            v->stg_pulse_width = (std::stoi(outstr.substr(0, 2), 0, 16) / 255.f) - 0.5f;
+            v->pulse_width_freq = std::stoi(outstr.substr(2, 2), 0, 16) / 16.f;
             break;
         }
     }
@@ -411,6 +463,10 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->waveform = instrumentlist[i]->waveform;
             v->filter = instrumentlist[i]->filter;
 			v->my_bpm = bpm.load();
+            v->vibrato_freq = 0;
+            v->vibrato_amplitude = 0;
+            v->vibrato_offset = 0;
+            v->vibrato_phase = 0;
 
             // Prepare synth queueing variables
             double frames_per_tick = FramesPerTick();
@@ -463,6 +519,11 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->end_time_ms = instrumentlist[i]->end_time_ms;
             v->mid_time_ms = instrumentlist[i]->mid_time_ms;
             v->looping = instrumentlist[i]->loop;
+            v->vibrato_freq = 0;
+            v->vibrato_amplitude = 0;
+            v->vibrato_offset = 0;
+            v->vibrato_phase = 0;
+
             // The sample slot may be empty or not loaded yet: nothing to play then
             auto* smp = GetAt(&samplelist, instrumentlist[i]->sample_index);
             auto* snd = smp != nullptr ? geptr->GetSound(smp->sound_index) : nullptr;
@@ -3078,7 +3139,7 @@ void EditorControl()
                     // Copy to clipboard
                     if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][0] != -9999)
                         copied_note = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][0];
-                    if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][1] != -9999)
+                    if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][1] != -1)
                         copied_instr = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][1];
 
                     // Preview note
@@ -3135,12 +3196,12 @@ void EditorControl()
                             phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] = (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] - 1) - 0xFFFF;
 
                         // Copy to clipboard
-                        copied_instr = phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                        copied_instr = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x];
                     }
 
                     // Handle deletes
                     if (inp->is_b_pressed())
-                        phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1;
+                        phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] = -1;
                 }
 
                 // Edit fx1,2,3
@@ -3169,14 +3230,14 @@ void EditorControl()
                     }
 
                     // Copy to clipboard
-                    if (phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] != -1)
-                        copied_effect = phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                    if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] != -1)
+                        copied_effect = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x];
 
                     // Handle deletes
                     if (inp->is_b_pressed())
                     {
-						phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1; // Clear effect
-						phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x + 1] = -1; // Clear effect param
+						phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] = -1; // Clear effect
+						phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x + 1] = -1; // Clear effect param
                     }
                 }
 
@@ -3215,12 +3276,12 @@ void EditorControl()
                     }
 
                     // Copy to clipboard
-                    if (phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] != -1)
-                        copied_effect_param = phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                    if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] != -1)
+                        copied_effect_param = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x];
 
                     // Handle deletes
                     if (inp->is_b_pressed())
-                        phraselist[open_phrase]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1;
+                        phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] = -1;
                 }
             }
             // Goto page
@@ -4085,14 +4146,14 @@ void EditorControl()
                 }
 
                 // Copy to clipboard
-                if (tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x] != -1)
-                    copied_effect = tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                if (tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x] != -1)
+                    copied_effect = tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x];
 
                 // Handle deletes
                 if (inp->is_b_pressed())
                 {
-                    tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1; // Clear effect
-                    tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x + 1] = -1; // Clear param
+                    tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x] = -1; // Clear effect
+                    tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x + 1] = -1; // Clear param
                 }
             }
 
@@ -4131,12 +4192,12 @@ void EditorControl()
                 }
 
                 // Copy to clipboard
-                if (tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x] != -1)
-                    copied_effect_param = tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x];
+                if (tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x] != -1)
+                    copied_effect_param = tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x];
 
                 // Handle deletes
                 if (inp->is_b_pressed())
-                    tablelist[open_table]->arr[cursor_y + offset_y][cursor_x + offset_x] = -1;
+                    tablelist[open_table]->arr[cursor_y + table_offset_y][cursor_x] = -1;
             }
         }
         // Goto page

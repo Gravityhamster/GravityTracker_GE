@@ -51,8 +51,8 @@ int playing_channel = -1;
 int open_instrument = -1;
 int open_sample = -1;
 int open_table = -1;
-int fx_length = 5;
-char fx[] = { 'E', 'V', 'K', 'D', 'T'};
+int fx_length = 0;
+char fx[] = { 'E', 'V', 'K', 'D', 'T', 'F', 'C', 'R', 'Q', 'P', 'I', 'O', 'W'};
 int min_note = -12;
 int max_note = 107;
 bool pause_song = true;
@@ -101,6 +101,9 @@ color body_text_b = { {0, 0, 0}, {255, 255, 255} };
 // Master pre code
 void GameInit()
 {
+    // Set fx length
+	fx_length = sizeof(fx) / sizeof(fx[0]);
+
     // Set UI grid w and h
     song_grid_h = std::min(rowcount, geptr->GetCanvasH() - 4);
     song_grid_w = std::min(channelcount, (geptr->GetCanvasW() - 8) / 5);

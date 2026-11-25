@@ -130,6 +130,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\$(ProjectName)\SDL\include;$(SolutionDir)\$(ProjectName)\SDL_TTF\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

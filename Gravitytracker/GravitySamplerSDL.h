@@ -340,6 +340,7 @@ public:
                 for (size_t vi = 0; vi < sampler->voices.size(); ++vi)
                 {
                     auto v = sampler->voices[vi];
+                    auto final_freq = v->freq.load() + v->vibrato_offset;
                     VoiceSmooth& sm = smooth[vi];
 
                     if (!v->start_playing || !v->sound)
@@ -393,7 +394,7 @@ public:
 
                     // -= Playback speed, ramped across the buffer to avoid pitch stepping =-
                     const double rate_start = v->cur_rate;
-                    const double rate_end = PlaybackRate(v->freq.load(), v->base_freq.load());
+                    const double rate_end = PlaybackRate(final_freq, v->base_freq.load());
 
                     // Rate ramps linearly across the buffer: add a step instead of dividing every frame
                     const double rate_step = (rate_end - rate_start) / block_frames;
@@ -603,7 +604,7 @@ public:
         // Step volume
         if (voices[voice_index]->volume_freq != 0)
         {
-            (*new_vol) = voices[voice_index]->stg_volume + (voices[voice_index]->volume_freq * 16) / 200;
+            (*new_vol) = voices[voice_index]->stg_volume + (voices[voice_index]->volume_freq * 16) / 100;
             if ((*new_vol) < 0)
                 (*new_vol) = 0;
             voices[voice_index]->stg_volume = (*new_vol);
@@ -627,6 +628,20 @@ public:
             if ((*new_resonance) > 1) 
                 (*new_resonance) = 1;
             voices[voice_index]->stg_resonance = (*new_resonance);
+        }
+        // Step vibrato
+        if (voices[voice_index]->vibrato_freq != 0 && voices[voice_index]->vibrato_amplitude != 0)
+        {
+            voices[voice_index]->vibrato_phase += ((voices[voice_index]->vibrato_freq / 256.0) * 0.75 * 10.) * 10.0;
+            voices[voice_index]->vibrato_offset = ((sin((voices[voice_index]->vibrato_phase) * 2. * PI) / 2)) * (voices[voice_index]->vibrato_amplitude * 500.);
+            while (voices[voice_index]->vibrato_phase > 1.)
+                voices[voice_index]->vibrato_phase -= 1.;
+            while (voices[voice_index]->vibrato_phase < 0.)
+                voices[voice_index]->vibrato_phase += 1.;
+        }
+        else
+        {
+            voices[voice_index]->vibrato_offset = 0;
         }
     }
 };

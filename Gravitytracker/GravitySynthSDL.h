@@ -302,6 +302,7 @@ public:
                 for (size_t vi = 0; vi < synth->voices.size(); ++vi)
                 {
                     auto v = synth->voices[vi];
+					auto final_freq = v->freq.load() + v->vibrato_offset;
                     VoiceSmooth& sm = smooth[vi];
 
                     if (!v->start_playing)
@@ -320,7 +321,7 @@ public:
                     const float pan = std::clamp<float>(v->panning.load(), 0.f, 1.f);
                     // Clamp to [0, Nyquist]: an unbounded pitch sweep reaches Inf, which turned the phase into NaN
                     // and wrote NaN to the device. std::max/min also map a NaN freq to 0.
-                    const float step = std::min(0.5f, std::max(0.0f, v->freq.load() / (float)spec->freq));
+                    const float step = std::min(0.5f, std::max(0.0f, final_freq / (float)spec->freq));
 
                     float gain_l, gain_r;
                     if (channels == 2)
@@ -573,7 +574,7 @@ public:
         // Step volume
         if (voices[voice_index]->volume_freq != 0)
         {
-            (*new_vol) = voices[voice_index]->stg_volume + (voices[voice_index]->volume_freq * 16) / 200;
+            (*new_vol) = voices[voice_index]->stg_volume + (voices[voice_index]->volume_freq * 16) / 100;
             if ((*new_vol) < 0)
                 (*new_vol) = 0;
             voices[voice_index]->stg_volume = (*new_vol);
@@ -597,6 +598,20 @@ public:
             if ((*new_resonance) > 1)
                 (*new_resonance) = 1;
             voices[voice_index]->stg_resonance = (*new_resonance);
+        }
+        // Step vibrato
+        if (voices[voice_index]->vibrato_freq != 0 && voices[voice_index]->vibrato_amplitude != 0)
+        {
+            voices[voice_index]->vibrato_phase += ((voices[voice_index]->vibrato_freq / 256.0) * 0.75 * 10.) * 10.0;
+            voices[voice_index]->vibrato_offset = ((sin((voices[voice_index]->vibrato_phase) * 2. * PI) / 2)) * (voices[voice_index]->vibrato_amplitude * 500.);
+            while (voices[voice_index]->vibrato_phase > 1.)
+                voices[voice_index]->vibrato_phase -= 1.;
+            while (voices[voice_index]->vibrato_phase < 0.)
+                voices[voice_index]->vibrato_phase += 1.;
+        }
+        else
+        {
+            voices[voice_index]->vibrato_offset = 0;
         }
     }
 };

@@ -69,6 +69,18 @@ inline void SamplerProcessChamberlainFilter(float sample, float cutoff, float re
     (*lp) *= 0.999f;
 }
 
+// Smoothing time constant for volume/pan changes, in seconds.
+// Lower = snappier but more click-prone on big jumps; higher = smoother but laggier.
+#ifndef SAMPLER_GAIN_SMOOTH_SECONDS
+#define SAMPLER_GAIN_SMOOTH_SECONDS 0.003f
+#endif
+
+// Smoothing time constant for filter cutoff/resonance changes, in seconds.
+#ifndef SAMPLER_FILTER_SMOOTH_SECONDS
+#define SAMPLER_FILTER_SMOOTH_SECONDS 0.003f
+#endif
+
+
 // Template for sampler objects
 class GravityEngine_Sampler
 {
@@ -160,6 +172,11 @@ public:
         const size_t frame_bytes = sizeof(float) * channels;
         std::vector<Uint8> buffer(buffer_size);
 
+        // One-pole smoothers (see VoiceSmooth). The coefficients are independent of block size.
+        const float smooth_coef = 1.0f - expf(-1.0f / (SAMPLER_GAIN_SMOOTH_SECONDS * (float)spec->freq));
+        const float filt_smooth_coef = 1.0f - expf(-1.0f / (SAMPLER_FILTER_SMOOTH_SECONDS * (float)spec->freq));
+        std::vector<VoiceSmooth> smooth(sampler->voices.size());
+
         // Diagnostics (printed every ~2 s when SAMPLER_DIAG is on)
         uint64_t diag_blocks = 0, diag_gate_skips = 0, diag_empty_pops = 0, diag_underruns = 0;
         double diag_max_ms = 0.0;
@@ -202,6 +219,9 @@ public:
 
                 float* out = (float*)buffer.data();
 
+                if (smooth.size() < sampler->voices.size())
+                    smooth.resize(sampler->voices.size());
+
                 // -= Phase 1: apply tracker updates (stops, starts, queued changes) =-
                 // The tracker holds batch_mutex while it writes a whole row/tick for all voices.
                 // try_lock never blocks the audio thread: if the tracker is mid-write we apply nothing
@@ -212,13 +232,19 @@ public:
                     const bool can_apply = batch_lock.owns_lock();
                     if (!can_apply) ++diag_gate_skips;
 
-                    for (auto v : sampler->voices)
+                    for (size_t vi = 0; vi < sampler->voices.size(); ++vi)
                     {
+                        auto v = sampler->voices[vi];
+
                         if (can_apply)
                         {
                             // Voice was just triggered: initialise its state
                             if (v->will_start_playing)
                             {
+                                // A (re)triggered note starts at its own gains/filter, not a glide from the previous note
+                                smooth[vi].primed = false;
+                                smooth[vi].filt_primed = false;
+
                                 v->freq = v->stg_step_freq.load();
                                 v->volume = v->stg_volume.load();
                                 v->cutoff = v->stg_cutoff.load();
@@ -311,10 +337,18 @@ public:
                 }
 
                 // -= Phase 2: render every playing voice =-
-                for (auto v : sampler->voices)
+                for (size_t vi = 0; vi < sampler->voices.size(); ++vi)
                 {
+                    auto v = sampler->voices[vi];
+                    VoiceSmooth& sm = smooth[vi];
+
                     if (!v->start_playing || !v->sound)
+                    {
+                        // Idle voice: the next note on this voice starts at its target gain / filter
+                        sm.primed = false;
+                        sm.filt_primed = false;
                         continue;
+                    }
 
                     // -= Volume and panning gains for this buffer =-
                     const float vol = v->volume.load();
@@ -331,6 +365,17 @@ public:
                     {
                         gains[0] = (1.0f - std::abs(0.5f - pan)) * vol;
                         gains[1] = gains[0];
+                    }
+
+                    // gain_l / gain_r above are now TARGETS. Smoothed gains chase them every sample.
+                    float curs[2]; 
+                    curs[0] = sm.gain_l, 
+                    curs[1] = sm.gain_r;
+                    if (!sm.primed)
+                    {
+                        curs[0] = gains[0];     // snap: keeps a hard note attack
+                        curs[1] = gains[1];     // (use 0.f for both to get a short fade-in on note start)
+                        sm.primed = true;
                     }
 
                     // -= Region of the sample that can be played (in frames) =-
@@ -362,13 +407,29 @@ public:
                     const FilterType filter_type = v->filter;
                     const bool use_filter = (filter_type != FilterType::none) &&
                         (v->algorithm == FilterAlgorithm::chamberlain);
+                    // f_target / q_target are TARGETS; f_coef / q_coef are the smoothed values that chase them
+                    float f_target = 0.f, q_target = 0.f;
                     float f_coef = 0.f, q_coef = 0.f;
                     if (use_filter)
                     {
-                        const float warped = v->cutoff * v->cutoff * v->cutoff;
+                        const float cutoff = std::clamp<float>(v->cutoff, 0.f, 1.f);
+                        const float warped = cutoff * cutoff * cutoff;
                         const float cutoff_hz = warped * ((float)spec->freq * 0.5f);
-                        f_coef = std::clamp(2.0f * sinf(PI * cutoff_hz / (float)spec->freq), 0.f, 0.999f);
-                        q_coef = std::clamp(1.0f - v->resonance, 0.05f, 1.f);
+                        f_target = std::clamp(2.0f * sinf(PI * cutoff_hz / (float)spec->freq), 0.f, 0.999f);
+                        q_target = std::clamp(1.0f - v->resonance, 0.05f, 1.f);
+
+                        f_coef = sm.f_coef;
+                        q_coef = sm.q_coef;
+                        if (!sm.filt_primed)
+                        {
+                            f_coef = f_target;  // snap on note start / when the filter is switched on
+                            q_coef = q_target;
+                            sm.filt_primed = true;
+                        }
+                    }
+                    else
+                    {
+                        sm.filt_primed = false; // filter off: re-snap when it comes back on
                     }
 
                     // Filter state is copied into locals for the loop and written back afterwards,
@@ -403,13 +464,23 @@ public:
                             i1 = can_loop ? loop_start : i0;
                         const float frac = (float)(pos - (double)i0);
 
+                        // Glide the coefficients toward their targets (no step at the block boundary)
+                        if (use_filter)
+                        {
+                            f_coef += (f_target - f_coef) * filt_smooth_coef;
+                            q_coef += (q_target - q_coef) * filt_smooth_coef;
+                        }
+
                         for (int c = 0; c < channels; c++)
                         {
                             const float a = src[i0 * channels + c];
                             const float b = src[i1 * channels + c];
 
+                            // Glide the gains toward their targets
+                            curs[c] += (gains[c] - curs[c]) * smooth_coef;
+
                             // Pitched sample with volume and pan applied (same as the synth's left_sample / right_sample)
-                            float s = (a + (b - a) * frac) * gains[c];
+                            float s = (a + (b - a) * frac) * curs[c];
 
                             // Filter (same maths as SamplerProcessChamberlainFilter)
                             if (use_filter)
@@ -442,6 +513,15 @@ public:
 
                     v->read_pos = pos;
                     v->cur_rate = rate_end;
+
+                    // Save smooth step factors
+                    sm.gain_l = curs[0];
+                    sm.gain_r = curs[1];
+                    if (use_filter)
+                    {
+                        sm.f_coef = f_coef;
+                        sm.q_coef = q_coef;
+                    }
                 }
 
                 // Clamp so overlapping voices can't exceed full scale
@@ -534,6 +614,8 @@ public:
             (*new_cutoff) = voices[voice_index]->stg_cutoff + (voices[voice_index]->cutoff_freq * 16) / 200;
             if ((*new_cutoff) < 0)
                 (*new_cutoff) = 0;
+            if ((*new_cutoff) > 1) 
+                (*new_cutoff) = 1;
             voices[voice_index]->stg_cutoff = (*new_cutoff);
         }
         // Step resonance
@@ -542,6 +624,8 @@ public:
             (*new_resonance) = voices[voice_index]->stg_resonance + (voices[voice_index]->resonance_freq * 16) / 200;
             if ((*new_resonance) < 0)
                 (*new_resonance) = 0;
+            if ((*new_resonance) > 1) 
+                (*new_resonance) = 1;
             voices[voice_index]->stg_resonance = (*new_resonance);
         }
     }

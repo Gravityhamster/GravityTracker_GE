@@ -459,8 +459,6 @@ void PlayStepPhrase(int channel_index, int playing_phrase, int step_ptr)
             v->pan_phase = 0.5f - asinf(std::clamp((instrumentlist[i]->panning - 0.5f) * 2.0f, -1.0f, 1.0f)) / (2.0f * PI);
             v->pan_freq = instrumentlist[i]->pan_freq;
             v->pitch_freq = instrumentlist[i]->pitch_freq;
-            v->cutoff = instrumentlist[i]->cutoff;
-            v->resonance = instrumentlist[i]->resonance;
             v->start_time_ms = instrumentlist[i]->start_time_ms;
             v->end_time_ms = instrumentlist[i]->end_time_ms;
             v->mid_time_ms = instrumentlist[i]->mid_time_ms;
@@ -776,6 +774,7 @@ void SubStepTickHelper(int channel_index)
             new_freq // Frequency changes,
             , new_pan // Panning changes,
             , new_vol // Volume changes,
+            , -1.0
             , new_ctf // Cutoff changes,
             , new_res // Resonance changes
         };
@@ -4002,6 +4001,7 @@ void EditorControl()
             }
 
             // wrap the cursor and clamp offsets
+
             if (cursor_x > instrument::sample_menu_width - 1)
                 cursor_x = 0;
             if (cursor_x < 0)

@@ -52,6 +52,22 @@ enum class SynthWaveForm
     max = noise
 };
 
+// Per-voice smoothing state. Only ever touched by the audio thread, so no atomics needed.
+// Tracker ticks change volume, pan, cutoff and resonance in steps, and the block renderer only sees
+// them at block boundaries. Gliding the values toward their new targets every sample removes that step.
+//  - Gains: the final L/R gains are smoothed (rather than vol and pan separately), so no sin/cos per sample.
+//  - Filter: the final Chamberlain f/q coefficients are smoothed, so no sinf per sample.
+struct VoiceSmooth
+{
+    float gain_l = 0.f;
+    float gain_r = 0.f;
+    bool  primed = false;       // false = snap gains to their targets on the next block (new note)
+
+    float f_coef = 0.f;
+    float q_coef = 0.f;
+    bool  filt_primed = false;  // false = snap f/q to their targets on the next block (new note / filter just enabled)
+};
+
 // Gravity Engine sound class
 class GravityEngine_Sound
 {

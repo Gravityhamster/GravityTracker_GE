@@ -76,20 +76,15 @@ inline std::map<SynthWaveForm, std::string> waveform_to_string = {
     {SynthWaveForm::noise, "NOISE"}
 };
 
-// Per-voice output gain smoothing state. Only ever touched by the audio thread, so no atomics needed.
-// Smoothing the final L/R gains (rather than vol and pan separately) removes the step at block
-// boundaries when a tick changes volume or pan, without needing sin/cos per sample.
-struct VoiceGainSmooth
-{
-    float gain_l = 0.f;
-    float gain_r = 0.f;
-    bool  primed = false;   // false = snap to the target gain on the next block (new note)
-};
-
 // Smoothing time constant for volume/pan changes, in seconds.
 // Lower = snappier but more click-prone on big jumps; higher = smoother but laggier.
 #ifndef SYNTH_GAIN_SMOOTH_SECONDS
 #define SYNTH_GAIN_SMOOTH_SECONDS 0.003f
+#endif
+
+// Smoothing time constant for filter cutoff/resonance changes, in seconds.
+#ifndef SYNTH_FILTER_SMOOTH_SECONDS
+#define SYNTH_FILTER_SMOOTH_SECONDS 0.003f
 #endif
 
 // Template for synth objects
@@ -148,9 +143,10 @@ public:
         float* buffer = (float*)SDL_malloc(block_bytes);
         bool first = true;
 
-        // One-pole gain smoother (see VoiceGainSmooth). The coefficient is independent of block size.
+        // One-pole smoothers (see VoiceSmooth). The coefficients are independent of block size.
         const float smooth_coef = 1.0f - expf(-1.0f / (SYNTH_GAIN_SMOOTH_SECONDS * (float)spec->freq));
-        std::vector<VoiceGainSmooth> gain_smooth(synth->voices.size());
+        const float filt_smooth_coef = 1.0f - expf(-1.0f / (SYNTH_FILTER_SMOOTH_SECONDS * (float)spec->freq));
+        std::vector<VoiceSmooth> smooth(synth->voices.size());
 
         // Cheap noise generator (xorshift32) instead of mt19937 + distribution
         uint32_t noise_state = std::random_device{}() | 1u;
@@ -198,6 +194,9 @@ public:
 
                 SDL_memset(buffer, 0, block_bytes);
 
+                if (smooth.size() < synth->voices.size())
+                    smooth.resize(synth->voices.size());
+
                 // -= Phase 1: apply tracker updates (starts, queued changes) =-
                 // The tracker holds batch_mutex while it writes a whole tick for all voices.
                 // try_lock never blocks the audio thread: if the tracker is mid-write we apply nothing
@@ -208,11 +207,17 @@ public:
                     const bool can_apply = batch_lock.owns_lock();
                     if (!can_apply) ++diag_gate_skips;
 
-                    for (auto v : synth->voices)
+                    for (size_t vi = 0; vi < synth->voices.size(); ++vi)
                     {
+                        auto v = synth->voices[vi];
+
                         // Voice was just triggered: initialise its state
                         if (can_apply && v->will_start_playing)
                         {
+                            // A (re)triggered note starts at its own gains/filter, not a glide from the previous note
+                            smooth[vi].primed = false;
+                            smooth[vi].filt_primed = false;
+
                             v->freq = v->stg_base_freq.load();
                             v->volume = v->stg_volume.load();
                             v->cutoff = v->stg_cutoff.load();
@@ -294,18 +299,16 @@ public:
                 }
 
                 // -= Phase 2: render every playing voice =-
-                if (gain_smooth.size() < synth->voices.size())
-                    gain_smooth.resize(synth->voices.size());
-
                 for (size_t vi = 0; vi < synth->voices.size(); ++vi)
                 {
                     auto v = synth->voices[vi];
-                    VoiceGainSmooth& sm = gain_smooth[vi];
+                    VoiceSmooth& sm = smooth[vi];
 
                     if (!v->start_playing)
                     {
-                        // Idle voice: the next note on this voice starts at its target gain
+                        // Idle voice: the next note on this voice starts at its target gain / filter
                         sm.primed = false;
+                        sm.filt_primed = false;
                         continue;
                     }
 
@@ -356,13 +359,28 @@ public:
                         (v->algorithm == FilterAlgorithm::chamberlain);
                     const FilterType filter_type = v->filter;
                     float lp = v->lp, bp = v->bp, hp = v->hp;
+                    // f_target / q_target are TARGETS; f_coef / q_coef are the smoothed values that chase them
+                    float f_target = 0.f, q_target = 0.f;
                     float f_coef = 0.f, q_coef = 0.f;
                     if (use_filter)
                     {
                         const float warped = v->cutoff * v->cutoff * v->cutoff;
                         const float cutoff_hz = warped * ((float)spec->freq * 0.5f);
-                        f_coef = std::clamp(2.0f * sinf(PI * cutoff_hz / (float)spec->freq), 0.f, 0.999f);
-                        q_coef = std::clamp(1.0f - v->resonance, 0.05f, 1.f);
+                        f_target = std::clamp(2.0f * sinf(PI * cutoff_hz / (float)spec->freq), 0.f, 0.999f);
+                        q_target = std::clamp(1.0f - v->resonance, 0.05f, 1.f);
+
+                        f_coef = sm.f_coef;
+                        q_coef = sm.q_coef;
+                        if (!sm.filt_primed)
+                        {
+                            f_coef = f_target;  // snap on note start / when the filter is switched on
+                            q_coef = q_target;
+                            sm.filt_primed = true;
+                        }
+                    }
+                    else
+                    {
+                        sm.filt_primed = false; // filter off: re-snap when it comes back on
                     }
 
                     float* out = buffer;
@@ -371,8 +389,8 @@ public:
                     {
                         // -= Raw waveform from the phase (0..1) =-
                         float s;
-                        double f;
-                        int d;
+                        // double f;
+                        // int d;
                         switch (waveform)
                         {
                         case SynthWaveForm::sine:
@@ -411,6 +429,10 @@ public:
 
                         if (use_filter)
                         {
+                            // Glide the coefficients toward their targets (no step at the block boundary)
+                            f_coef += (f_target - f_coef) * filt_smooth_coef;
+                            q_coef += (q_target - q_coef) * filt_smooth_coef;
+
                             hp = s - lp - q_coef * bp;
                             bp = bp + f_coef * hp;
                             lp = lp + f_coef * bp;
@@ -450,6 +472,11 @@ public:
                     v->lp = lp; v->bp = bp; v->hp = hp;
                     sm.gain_l = cur_l;
                     sm.gain_r = cur_r;
+                    if (use_filter)
+                    {
+                        sm.f_coef = f_coef;
+                        sm.q_coef = q_coef;
+                    }
                 }
 
                 // Clamp the buffer to -1.0 to 1.0 to prevent clipping and distortion

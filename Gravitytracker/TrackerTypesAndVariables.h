@@ -656,6 +656,23 @@ public:
         return cant_play;
     }
 
+	// Step but skip the step-level effects (used for HOP)
+    bool skip_step()
+    {
+        bool skipped_over_phrase = false;
+        // Increment step in phrase
+        step_ptr++;
+        // If the step ptr has reached the end of the phrase, go back to the 0th step
+        if (step_ptr % phrase::len_y == 0)
+        {
+            step_ptr = 0;
+            // Increment the phrase pointer in the chain
+            inc_phrase();
+            skipped_over_phrase = true;
+        }
+		return skipped_over_phrase;
+    }
+
 private:
 
     void inc_phrase()
@@ -686,6 +703,12 @@ private:
                     }
                 }
             }
+        }
+        else
+        {
+            // Set playing phrase to current on advance
+            playing_phrase = open_phrase;
+			phrase_ptr = open_phrase_index;
         }
     }
 

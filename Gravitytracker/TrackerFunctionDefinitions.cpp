@@ -237,6 +237,7 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type
     // Execute the effect before the instrument settings are applied
     if (t == before)
     {
+        std::string outstr;
         // Switch behavior on the fx
         switch (fx[f])
         {
@@ -255,6 +256,30 @@ void DoFX(int channel_index, ChannelType inst_type, int f, int f_p, FX_Exec_Type
             break;
         case 'T': // T : Time
 			ChangeBPM(f_p);
+            break;
+        case 'H': // H : Hop
+            // Set hop
+            outstr = IntToHexString(f_p);
+            outstr.insert(outstr.begin(), 4 - outstr.size(), '0');
+            int i = std::stoi(outstr.substr(0, 4), 0, 16); // Steps to hop
+            if (i == 0)
+            {
+                // Hop to next phrase in line
+                bool contin = false;
+                while (contin == false)
+                {
+                    contin = channellist[channel_index].skip_step();
+                }
+            }
+            else
+            {
+                // Hop to next step for the number
+                while (i > 0)
+                {
+                    channellist[channel_index].skip_step();
+                    i--;
+                }
+            }
             break;
         }
     }
@@ -3232,6 +3257,8 @@ void EditorControl()
                     // Copy to clipboard
                     if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x] != -1)
                         copied_effect = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x];
+                    if (phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x + 1] != -1)
+                        copied_effect_param = phraselist[open_phrase]->arr[cursor_y + phrase_offset_y][cursor_x + 1];
 
                     // Handle deletes
                     if (inp->is_b_pressed())
